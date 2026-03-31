@@ -1,0 +1,89 @@
+# Production deployment: full FRMS admin stack (frontend + backend + MSSQL)
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# Requires: .env file with production secrets
+
+version: '3.9'
+
+services:
+  # Frontend (React app served via Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: frms-admin-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      VITE_API_BASE_PATH: /api/v1
+      VITE_API_PROXY_TARGET: http://backend:4000
+      VITE_USE_LIVE_API: "true"
+    depends_on:
+      - backend
+    networks:
+      - frms-network
+    restart: unless-stopped
+
+  # Backend (Spring Boot API)
+  backend:
+    build:
+      context: ./server/frms-ops-api
+      dockerfile: Dockerfile
+    container_name: frms-ops-api
+    ports:
+      - "4000:4000"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      FRMS_JDBC_URL: jdbc:sqlserver://mssql:1433;databaseName=frms_ops;encrypt=false;trustServerCertificate=true
+      FRMS_DB_USER: ${DB_USER:-sa}
+      FRMS_DB_PASSWORD: ${DB_PASSWORD:-YourStrong!Passw0rd}
+      FRMS_OPS_MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      FRMS_SMTP_HOST: ${SMTP_HOST:-}
+      FRMS_SMTP_PORT: ${SMTP_PORT:-587}
+      FRMS_SMTP_USER: ${SMTP_USER:-}
+      FRMS_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FRMS_MAIL_FROM: ${MAIL_FROM:-}
+      FRMS_OPS_FCM_ENABLED: ${FCM_ENABLED:-false}
+      FRMS_FCM_CREDENTIALS_PATH: ${FCM_CREDENTIALS_PATH:-}
+    depends_on:
+      mssql:
+        condition: service_healthy
+    networks:
+      - frms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Database (SQL Server 2022)
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: frms-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:-YourStrong!Passw0rd}
+      MSSQL_AGENT_ENABLED: "true"
+    ports:
+      - "1433:1433"
+    networks:
+      - frms-network
+    volumes:
+      - mssql-data:/var/opt/mssql/data
+      - ./database/mssql:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "${DB_PASSWORD:-YourStrong!Passw0rd}", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  frms-network:
+    driver: bridge
+
+volumes:
+  mssql-data:
+    driver: local

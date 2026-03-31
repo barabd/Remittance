@@ -1,0 +1,86 @@
+## Production profile configuration for frms-ops-api
+## Usage: java -Dspring.profiles.active=prod -jar frms-ops-api.jar
+## Or: set SPRING_PROFILES_ACTIVE=prod environment variable
+
+server:
+  port: 4000
+  servlet:
+    context-path: /api/v1
+  shutdown: graceful
+  compression:
+    enabled: true
+    min-response-size: 1024
+
+spring:
+  application:
+    name: frms-ops-api
+  datasource:
+    url: ${FRMS_JDBC_URL:jdbc:sqlserver://localhost:1433;databaseName=frms_ops;encrypt=false;trustServerCertificate=true}
+    username: ${FRMS_DB_USER:sa}
+    password: ${FRMS_DB_PASSWORD:YourStrong!Passw0rd}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Production: validate only, don't auto-create/update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: false  # Don't format SQL in production
+        use_sql_comments: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+logging:
+  level:
+    root: info
+    org.springframework: warn
+    org.hibernate.SQL: warn
+    org.hibernate.type.descriptor.sql.BasicBinder: warn
+    com.frms.ops: info
+  pattern:
+    console: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+
+# Outbound ops delivery (email, push notifications)
+frms:
+  cors:
+    # Set FRMS_CORS_ALLOWED_ORIGINS to your actual admin dashboard origin(s) — comma-separated.
+    allowed-origins: "${FRMS_CORS_ALLOWED_ORIGINS:https://ops.frms.example.com}"
+  ops:
+    queue:
+      default-checker: ${FRMS_OPS_QUEUE_DEFAULT_CHECKER:HO-Checker-01}
+    tracking:
+      default-checker: ${FRMS_OPS_TRACKING_DEFAULT_CHECKER:HO-Checker-01}
+    disbursement:
+      default-checker: ${FRMS_OPS_DISBURSEMENT_DEFAULT_CHECKER:HO-Checker-01}
+    masters:
+      default-checker: ${FRMS_OPS_MASTERS_DEFAULT_CHECKER:HO-Checker-01}
+    mail:
+      enabled: ${FRMS_OPS_MAIL_ENABLED:false}
+      host: ${FRMS_SMTP_HOST:}
+      port: ${FRMS_SMTP_PORT:587}
+      username: ${FRMS_SMTP_USER:}
+      password: ${FRMS_SMTP_PASSWORD:}
+      from: ${FRMS_MAIL_FROM:}
+      auth: ${FRMS_SMTP_AUTH:true}
+      start-tls: ${FRMS_SMTP_STARTTLS:true}
+    fcm:
+      enabled: ${FRMS_OPS_FCM_ENABLED:false}
+      credentials-path: ${FRMS_FCM_CREDENTIALS_PATH:}
+      credentials-json: ${FRMS_FCM_CREDENTIALS_JSON:}
+      topic: ${FRMS_FCM_TOPIC:ops-alerts}
+
+management:
+  endpoints:
+    web:
+      exposure: include=health,info  # Restrict actuator endpoints in production
+  endpoint:
+    health:
+      show-details: when-authorized

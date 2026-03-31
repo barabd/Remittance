@@ -1,0 +1,12 @@
+# Optional local SQL Server for frms-ops-api
+# docker compose -f server/docker-compose.mssql.yml up -d
+# Then: CREATE DATABASE frms_ops; in SSMS or sqlcmd
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+    ports:
+      - "1433:1433"

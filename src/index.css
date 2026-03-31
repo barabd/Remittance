@@ -1,0 +1,20 @@
+html,
+body,
+#root {
+  height: 100%;
+  font-family:
+    "Plus Jakarta Sans",
+    "Franklin Gothic URW",
+    "Helvetica Neue",
+    system-ui,
+    sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+/* App-wide error emphasis (#FF0000) — use with Typography/span for inline errors */
+.frms-error-text {
+  color: #ff0000;
+}

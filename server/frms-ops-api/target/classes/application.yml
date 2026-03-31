@@ -1,0 +1,51 @@
+server:
+  port: 4000
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: frms-ops-api
+  datasource:
+    url: ${FRMS_JDBC_URL:jdbc:sqlserver://localhost:1433;databaseName=frms_ops;encrypt=false;trustServerCertificate=true}
+    username: ${FRMS_DB_USER:sa}
+    password: ${FRMS_DB_PASSWORD:YourStrong!Passw0rd}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        format_sql: true
+
+logging:
+  level:
+    org.hibernate.SQL: warn
+
+# Outbound ops delivery (optional). When disabled, /operations/delivery/* still returns 200 but does not send.
+frms:
+  ops:
+    queue:
+      default-checker: ${FRMS_OPS_QUEUE_DEFAULT_CHECKER:HO-Checker-01}
+    tracking:
+      default-checker: ${FRMS_OPS_TRACKING_DEFAULT_CHECKER:HO-Checker-01}
+    disbursement:
+      default-checker: ${FRMS_OPS_DISBURSEMENT_DEFAULT_CHECKER:HO-Checker-01}
+    masters:
+      default-checker: ${FRMS_OPS_MASTERS_DEFAULT_CHECKER:HO-Checker-01}
+    mail:
+      enabled: ${FRMS_OPS_MAIL_ENABLED:false}
+      host: ${FRMS_SMTP_HOST:}
+      port: ${FRMS_SMTP_PORT:587}
+      username: ${FRMS_SMTP_USER:}
+      password: ${FRMS_SMTP_PASSWORD:}
+      from: ${FRMS_MAIL_FROM:}
+      auth: ${FRMS_SMTP_AUTH:true}
+      start-tls: ${FRMS_SMTP_STARTTLS:true}
+    fcm:
+      enabled: ${FRMS_OPS_FCM_ENABLED:false}
+      credentials-path: ${FRMS_FCM_CREDENTIALS_PATH:}
+      credentials-json: ${FRMS_FCM_CREDENTIALS_JSON:}
+      topic: ${FRMS_FCM_TOPIC:ops-alerts}
