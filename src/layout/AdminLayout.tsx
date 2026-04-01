@@ -205,7 +205,7 @@ export function AdminLayout() {
                     lineHeight: 1.2,
                   }}
                 >
-                  Admin Console
+                  RMS Admin
                 </Typography>
                 {liveApi ? (
                   <Typography

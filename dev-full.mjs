@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-console.log('🚀 Starting FRMS Admin Dashboard (Full Stack Mode)\n')
+console.log('🚀 Starting RMS Admin Dashboard (Full Stack Mode)\n')
 
 // Start mock API server
 const mockApi = spawn('node', [path.join(__dirname, 'server', 'mock-api.mjs')], {
