@@ -22,7 +22,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -243,45 +242,136 @@ export function SettlementRegulatoryDemoPage() {
 
       {tab === 0 ? (
         <Stack spacing={2}>
-          <Paper sx={{ p: 2, height: 360 }}>
-            <Typography sx={{ fontWeight: 900, mb: 1 }}>Weekly gross vs net settlement</Typography>
-            <ResponsiveContainer width="100%" height="90%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Gross inflow (m BDT)" fill={brand.green} />
-                <Bar dataKey="Net settlement (m BDT)" fill="#333" />
-              </BarChart>
-            </ResponsiveContainer>
+          <Paper
+            sx={{
+              p: 3,
+              height: 400,
+              background: 'linear-gradient(135deg, #ffffff 0%, #fbfcfd 100%)',
+              border: '1px solid rgba(0,0,0,0.05)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 950, color: brand.black, letterSpacing: -0.5 }}>
+                  Weekly Settlement Performance
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Comparison between gross inflows and final net positions in m BDT
+                </Typography>
+              </Box>
+              <Stack direction="row" gap={2}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '3px', bgcolor: brand.green }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700 }}>Gross Inflow</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '3px', bgcolor: '#374151' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 700 }}>Net Settlement</Typography>
+                </Box>
+              </Stack>
+            </Stack>
+
+            <Box sx={{ height: 'calc(100% - 60px)' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={6}>
+
+                  <defs>
+                    <linearGradient id="colorGross" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={brand.green} stopOpacity={1} />
+                      <stop offset="95%" stopColor={brand.greenBright} stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#374151" stopOpacity={1} />
+                      <stop offset="95%" stopColor="#111827" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.06)" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fontWeight: 600, fill: brand.gray600 }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fontWeight: 500, fill: brand.gray600 }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                    contentStyle={{
+                      borderRadius: '12px',
+                      border: 'none',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                      padding: '12px',
+                    }}
+                    itemStyle={{ fontWeight: 700, fontSize: '13px' }}
+                  />
+                  <Bar
+                    dataKey="Gross inflow (m BDT)"
+                    name="Gross Inflow"
+                    fill="url(#colorGross)"
+                    radius={[10, 10, 0, 0]}
+                    barSize={64}
+                  />
+                  <Bar
+                    dataKey="Net settlement (m BDT)"
+                    name="Net Settlement"
+                    fill="url(#colorNet)"
+                    radius={[10, 10, 0, 0]}
+                    barSize={64}
+                  />
+
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
           </Paper>
 
+
           <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
-            <Paper sx={{ p: 2, flex: 1 }}>
-              <Typography sx={{ fontWeight: 900, mb: 1 }}>Bilateral / nostro-style positions</Typography>
+            <Paper sx={{ p: 2, flex: 1, border: '1px solid rgba(0,0,0,0.05)' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 900, mb: 1.5, color: brand.green }}>
+                Bilateral / Nostro-style Positions
+              </Typography>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
-                    <TableCell>Counterparty</TableCell>
-                    <TableCell>Corridor</TableCell>
-                    <TableCell align="right">Net ৳</TableCell>
-                    <TableCell>Bucket</TableCell>
+                  <TableRow sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
+                    <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Counterparty</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Corridor</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700, py: 1.5 }}>Net ৳</TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 1.5 }}>Bucket</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {bilateral.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell>{b.counterparty}</TableCell>
+                    <TableRow key={b.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                      <TableCell sx={{ fontWeight: 500 }}>{b.counterparty}</TableCell>
                       <TableCell>{b.corridor}</TableCell>
-                      <TableCell align="right">{(b.netPositionBdt / 1e6).toFixed(1)}m</TableCell>
-                      <TableCell>{b.multilateralBucket}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: b.netPositionBdt < 0 ? '#d32f2f' : 'inherit' }}>
+                        {(b.netPositionBdt / 1e6).toFixed(1)}m
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={b.multilateralBucket}
+                          sx={{
+                            fontSize: '10px',
+                            height: 20,
+                            bgcolor: 'rgba(0,0,0,0.04)',
+                            fontWeight: 600,
+                          }}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </Paper>
+
             <Paper sx={{ p: 2, flex: 0.5 }}>
               <Typography sx={{ fontWeight: 900, mb: 1 }}>Multilateral summary</Typography>
               <Stack spacing={1}>

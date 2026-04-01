@@ -135,10 +135,11 @@ function statusChip(status: DisbursementStatus) {
     Approved: { bg: 'rgba(66,171,72,0.14)', fg: brand.green },
     Queued: { bg: 'rgba(0,0,0,0.06)', fg: brand.black },
     Disbursed: { bg: 'rgba(66,171,72,0.14)', fg: brand.green },
-    Failed: { bg: 'rgba(0,0,0,0.08)', fg: brand.black },
+    Failed: { bg: 'rgba(239,68,68,0.14)', fg: '#ef4444' },
     'On Hold': { bg: 'rgba(0,0,0,0.06)', fg: brand.black },
-    Rejected: { bg: 'rgba(0,0,0,0.08)', fg: brand.black },
+    Rejected: { bg: 'rgba(239,68,68,0.14)', fg: '#ef4444' },
   }
+
   return map[status]
 }
 
@@ -257,11 +258,31 @@ function parseExcelRows(file: File): Promise<DisbursementRow[]> {
   })
 }
 
+const LS_DISBURSEMENT_KEY = 'frms.disbursement.v1'
+
 export function RemittanceDisbursementPage() {
   const live = useLiveApi()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const [rows, setRows] = useState<DisbursementRow[]>(() => [...seedRows])
+  const [rows, setRows] = useState<DisbursementRow[]>(() => {
+    if (import.meta.env.VITE_USE_LIVE_API === 'true') return [...seedRows]
+    const raw = localStorage.getItem(LS_DISBURSEMENT_KEY)
+    if (!raw) return [...seedRows]
+    try {
+      const p = JSON.parse(raw) as DisbursementRow[]
+      return Array.isArray(p) && p.length > 0 ? p : [...seedRows]
+    } catch {
+      return [...seedRows]
+    }
+  })
+
+  // Persist to local storage in mock mode
+  useEffect(() => {
+    if (import.meta.env.VITE_USE_LIVE_API !== 'true') {
+      localStorage.setItem(LS_DISBURSEMENT_KEY, JSON.stringify(rows))
+    }
+  }, [rows])
+
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [liveError, setLiveError] = useState<string | null>(null)
   const selectedRow = useMemo(
@@ -684,8 +705,13 @@ export function RemittanceDisbursementPage() {
         flex: 1.1,
         minWidth: 160,
         renderCell: (params) => (
-          <Stack direction="row" alignItems="center" gap={0.75} sx={{ py: 0.5 }}>
-            <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            gap={0.75}
+            sx={{ height: '100%', py: 0.5 }}
+          >
+            <Typography variant="body2" noWrap sx={{ maxWidth: 200, fontWeight: 500 }}>
               {params.value}
             </Typography>
             {isActiveBeneficiary(String(params.value), benNames) ? (
@@ -698,9 +724,57 @@ export function RemittanceDisbursementPage() {
           </Stack>
         ),
       },
-      { field: 'payoutTo', headerName: 'Payout to', flex: 1.2, minWidth: 200 },
-      { field: 'payoutRef', headerName: 'Payout ref', flex: 0.9, minWidth: 150 },
-      { field: 'amountBDT', headerName: 'Amount (BDT)', flex: 0.9, minWidth: 140 },
+      {
+        field: 'payoutTo',
+        headerName: 'Payout to',
+        flex: 1.2,
+        minWidth: 200,
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={{ height: '100%', display: 'flex', alignItems: 'center' }}
+          >
+            {params.value}
+          </Typography>
+        ),
+      },
+      {
+        field: 'payoutRef',
+        headerName: 'Payout ref',
+        flex: 0.9,
+        minWidth: 150,
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={{ height: '100%', display: 'flex', alignItems: 'center' }}
+          >
+            {params.value || '—'}
+          </Typography>
+        ),
+      },
+      {
+        field: 'amountBDT',
+        headerName: 'Amount (BDT)',
+        flex: 0.9,
+        minWidth: 140,
+        align: 'right',
+        headerAlign: 'right',
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              height: '100%',
+              width: '100%',
+              fontWeight: 500,
+            }}
+          >
+            {params.value}
+          </Typography>
+        ),
+      },
       { field: 'maker', headerName: 'Maker', flex: 0.8, minWidth: 120 },
       {
         field: 'status',
@@ -708,13 +782,16 @@ export function RemittanceDisbursementPage() {
         flex: 0.9,
         minWidth: 140,
         renderCell: (params) => (
-          <Chip
-            size="small"
-            label={params.value}
-            sx={{ bgcolor: statusChip(params.value).bg, color: statusChip(params.value).fg }}
-          />
+          <Box sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+            <Chip
+              size="small"
+              label={params.value}
+              sx={{ bgcolor: statusChip(params.value as DisbursementStatus).bg, color: statusChip(params.value as DisbursementStatus).fg }}
+            />
+          </Box>
         ),
       },
+
     ],
     [benNames],
   )
@@ -903,6 +980,9 @@ export function RemittanceDisbursementPage() {
             columns={columns}
             disableRowSelectionOnClick
             onRowClick={(p) => setSelectedId(String(p.row.id))}
+            getRowClassName={(params) =>
+              String(params.row.id) === selectedId ? 'search-row-selected' : ''
+            }
             initialState={{
               pagination: { paginationModel: { pageSize: 10, page: 0 } },
             }}
@@ -911,9 +991,14 @@ export function RemittanceDisbursementPage() {
               border: 0,
               '& .MuiDataGrid-columnHeaders': { borderBottom: '1px solid', borderColor: 'divider' },
               '& .MuiDataGrid-row:hover': { bgcolor: 'rgba(66,171,72,0.06)' },
+              '& .search-row-selected': { 
+                bgcolor: 'rgba(66,171,72,0.12) !important',
+                '&:hover': { bgcolor: 'rgba(66,171,72,0.18) !important' }
+              },
               '& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus': { outline: 'none' },
             }}
           />
+
         </Box>
       </Paper>
 

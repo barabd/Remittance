@@ -42,8 +42,9 @@ function statusChip(status: MasterApprovalStatus) {
     'Pending Approval': { bg: 'rgba(255,255,255,0.22)', fg: brand.black },
     Active: { bg: 'rgba(66,171,72,0.14)', fg: brand.green },
     Approved: { bg: 'rgba(66,171,72,0.14)', fg: brand.green },
-    Rejected: { bg: 'rgba(0,0,0,0.08)', fg: brand.black },
+    Rejected: { bg: 'rgba(239,68,68,0.14)', fg: '#ef4444' },
     'On Hold': { bg: 'rgba(0,0,0,0.06)', fg: brand.black },
+
   }
   return map[status]
 }
@@ -102,16 +103,17 @@ export function BeneficiaryManagementPage() {
     setEditingId(selected.id)
     setSaveNotice(null)
     setForm({
-      fullName: selected.fullName,
-      phone: selected.phone,
-      idDocumentRef: selected.idDocumentRef,
-      bankName: selected.bankName,
-      bankAccountMasked: selected.bankAccountMasked,
-      branch: selected.branch,
+      fullName: selected.fullName || '',
+      phone: selected.phone || '',
+      idDocumentRef: selected.idDocumentRef || '',
+      bankName: selected.bankName || '',
+      bankAccountMasked: selected.bankAccountMasked || '',
+      branch: selected.branch || '',
       notes: selected.notes ?? '',
     })
     setDialogOpen(true)
   }
+
 
   async function saveForm() {
     if (!form.fullName.trim() || !form.phone.trim()) return
@@ -253,27 +255,110 @@ export function BeneficiaryManagementPage() {
     (selected?.status === 'Pending Approval' || selected?.status === 'On Hold') && !acting
 
   const columns: GridColDef<BeneficiaryRecord>[] = [
-    { field: 'id', headerName: 'ID', flex: 0.7, minWidth: 120 },
-    { field: 'fullName', headerName: 'Name', flex: 1, minWidth: 160 },
-    { field: 'phone', headerName: 'Phone', flex: 0.9, minWidth: 130 },
-    { field: 'bankName', headerName: 'Bank', flex: 0.9, minWidth: 140 },
-    { field: 'bankAccountMasked', headerName: 'Account', flex: 0.9, minWidth: 130 },
-    { field: 'branch', headerName: 'Branch', flex: 0.7, minWidth: 110 },
-    { field: 'maker', headerName: 'Maker', flex: 0.6, minWidth: 100 },
+    {
+      field: 'id',
+      headerName: 'ID',
+      flex: 0.7,
+      minWidth: 120,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          {p.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'fullName',
+      headerName: 'Name',
+      flex: 1,
+      minWidth: 160,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center', fontWeight: 600 }}>
+          {p.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'phone',
+      headerName: 'Phone',
+      flex: 0.9,
+      minWidth: 130,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          {p.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'bankName',
+      headerName: 'Bank',
+      flex: 0.9,
+      minWidth: 140,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          {p.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'bankAccountMasked',
+      headerName: 'Account',
+      flex: 0.9,
+      minWidth: 130,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          {p.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'branch',
+      headerName: 'Branch',
+      flex: 0.7,
+      minWidth: 110,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          {p.value}
+        </Typography>
+      ),
+    },
+    {
+      field: 'maker',
+      headerName: 'Maker',
+      flex: 0.6,
+      minWidth: 100,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          {p.value}
+        </Typography>
+      ),
+    },
     {
       field: 'status',
       headerName: 'Status',
       flex: 0.8,
       minWidth: 130,
       renderCell: (p) => (
-        <Chip
-          size="small"
-          label={p.value}
-          sx={{ bgcolor: statusChip(p.value).bg, color: statusChip(p.value).fg }}
-        />
+        <Box sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          <Chip
+            size="small"
+            label={p.value}
+            sx={{ bgcolor: statusChip(p.value as MasterApprovalStatus).bg, color: statusChip(p.value as MasterApprovalStatus).fg }}
+          />
+        </Box>
       ),
     },
-    { field: 'createdAt', headerName: 'Created', flex: 0.9, minWidth: 140 },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 0.9,
+      minWidth: 140,
+      renderCell: (p) => (
+        <Typography variant="body2" sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+          {p.value}
+        </Typography>
+      ),
+    },
+
   ]
 
   return (
@@ -359,15 +444,23 @@ export function BeneficiaryManagementPage() {
             columns={columns}
             disableRowSelectionOnClick
             onRowClick={(p) => setSelectedId(String(p.row.id))}
+            getRowClassName={(params) =>
+              String(params.row.id) === selectedId ? 'search-row-selected' : ''
+            }
             initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
             pageSizeOptions={[10, 25, 50]}
             sx={{
               border: 0,
               '& .MuiDataGrid-columnHeaders': { borderBottom: '1px solid', borderColor: 'divider' },
               '& .MuiDataGrid-row:hover': { bgcolor: 'rgba(66,171,72,0.06)' },
+              '& .search-row-selected': { 
+                bgcolor: 'rgba(66,171,72,0.12) !important',
+                '&:hover': { bgcolor: 'rgba(66,171,72,0.18) !important' }
+              },
               '& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus': { outline: 'none' },
             }}
           />
+
         </Box>
       </Paper>
 

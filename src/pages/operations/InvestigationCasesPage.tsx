@@ -41,7 +41,8 @@ import {
 import { brand } from '../../theme/appTheme'
 
 export function InvestigationCasesPage() {
-  const [rows, , apiMeta] = useInvestigationCasesRefresh(loadCases)
+  const [rows, refresh, apiMeta] = useInvestigationCasesRefresh(loadCases)
+
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? null, [rows, selectedId])
 
@@ -145,6 +146,28 @@ export function InvestigationCasesPage() {
     setFilterAssignee('')
   }
 
+  async function handleNote() {
+    if (!selected || !noteText.trim()) return
+    try {
+      await addCaseNote(selected.id, 'Analyst', noteText.trim())
+      setNoteText('')
+      refresh()
+    } catch (e) {
+      console.error('Note Error:', e)
+    }
+  }
+
+
+  async function handleStatus(id: string, st: InvestigationCase['status']) {
+    try {
+      await setCaseStatus(id, st)
+      await syncInvestigationCasesFromLive().catch(() => undefined)
+      refresh() // Explicitly call refresh from hook just in case event is missed
+    } catch (e) {
+      console.error('Status Error:', e)
+    }
+  }
+
   const hasActiveFilters =
     Boolean(filterQuery.trim()) ||
     Boolean(filterStatus) ||
@@ -209,9 +232,10 @@ export function InvestigationCasesPage() {
           size="small"
           label={p.value}
           sx={{
-            bgcolor: p.value === 'Closed' ? 'rgba(66,171,72,0.14)' : 'rgba(0,0,0,0.06)',
-            color: p.value === 'Closed' ? brand.green : brand.black,
+            bgcolor: p.value === 'Closed' ? 'rgba(211, 47, 47, 0.14)' : 'rgba(0,0,0,0.06)',
+            color: p.value === 'Closed' ? '#d32f2f' : brand.black,
           }}
+
         />
       ),
     },
@@ -244,33 +268,55 @@ export function InvestigationCasesPage() {
       </Stack>
 
       <Paper sx={{ p: 2 }}>
-        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1.5 }}>
-          <FilterListOutlinedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
-          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-            Filters
+        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: '8px',
+              bgcolor: 'rgba(45, 157, 90, 0.1)',
+              color: brand.green,
+            }}
+          >
+            <FilterListOutlinedIcon sx={{ fontSize: 20 }} />
+          </Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: brand.green }}>
+            Search & Filters
           </Typography>
           {hasActiveFilters ? (
-            <Button size="small" onClick={clearFilters} sx={{ ml: { sm: 'auto' } }}>
-              Clear all
+            <Button
+              size="small"
+              variant="text"
+              onClick={clearFilters}
+              sx={{ ml: 'auto', fontWeight: 600 }}
+            >
+              Reset all
             </Button>
           ) : null}
         </Stack>
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={1.5}
-          flexWrap="wrap"
-          useFlexGap
-          sx={{ alignItems: { md: 'flex-start' } }}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: '1fr 1fr',
+              md: '2fr 1fr 1fr 1fr 1.2fr',
+            },
+            gap: 2,
+            alignItems: 'start',
+          }}
         >
           <TextField
             size="small"
             label="Search"
-            placeholder="Case ID, title, ref, subject, assignee"
+            placeholder="ID, title, ref..."
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            sx={{ minWidth: { md: 240 }, flex: { md: '1 1 220px' } }}
           />
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small">
             <InputLabel id="ic-filter-status">Status</InputLabel>
             <Select
               labelId="ic-filter-status"
@@ -278,13 +324,13 @@ export function InvestigationCasesPage() {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
             >
-              <MenuItem value="">All</MenuItem>
+              <MenuItem value="">All Statuses</MenuItem>
               <MenuItem value="Open">Open</MenuItem>
               <MenuItem value="Investigating">Investigating</MenuItem>
               <MenuItem value="Closed">Closed</MenuItem>
             </Select>
           </FormControl>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
+          <FormControl size="small">
             <InputLabel id="ic-filter-source">Source</InputLabel>
             <Select
               labelId="ic-filter-source"
@@ -292,7 +338,7 @@ export function InvestigationCasesPage() {
               value={filterSource}
               onChange={(e) => setFilterSource(e.target.value as typeof filterSource)}
             >
-              <MenuItem value="">All</MenuItem>
+              <MenuItem value="">All Sources</MenuItem>
               {CASE_SOURCES.map((s) => (
                 <MenuItem key={s} value={s}>
                   {s}
@@ -300,7 +346,7 @@ export function InvestigationCasesPage() {
               ))}
             </Select>
           </FormControl>
-          <FormControl size="small" sx={{ minWidth: 140 }}>
+          <FormControl size="small">
             <InputLabel id="ic-filter-priority">Priority</InputLabel>
             <Select
               labelId="ic-filter-priority"
@@ -308,7 +354,7 @@ export function InvestigationCasesPage() {
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value as typeof filterPriority)}
             >
-              <MenuItem value="">All</MenuItem>
+              <MenuItem value="">All Priorities</MenuItem>
               {CASE_PRIORITIES.map((p) => (
                 <MenuItem key={p} value={p}>
                   {p}
@@ -318,12 +364,13 @@ export function InvestigationCasesPage() {
           </FormControl>
           <TextField
             size="small"
-            label="Assignee contains"
+            label="Assignee"
+            placeholder="Name..."
             value={filterAssignee}
             onChange={(e) => setFilterAssignee(e.target.value)}
-            sx={{ minWidth: { md: 160 } }}
           />
-        </Stack>
+        </Box>
+
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
           Showing {filteredRows.length} of {rows.length} case{rows.length === 1 ? '' : 's'}
         </Typography>
@@ -335,11 +382,34 @@ export function InvestigationCasesPage() {
             rows={filteredRows}
             columns={cols}
             getRowId={(r) => r.id}
-            disableRowSelectionOnClick
-            onRowClick={(p) => setSelectedId(String(p.row.id))}
+            rowSelectionModel={{ type: 'include', ids: new Set(selectedId ? [selectedId] : []) }}
+            onRowSelectionModelChange={(model: any) => {
+              const next = model.ids?.values().next().value
+              setSelectedId(next ? String(next) : null)
+            }}
             initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
             pageSizeOptions={[10, 25, 50]}
-            sx={{ border: 0 }}
+            sx={{
+              border: 0,
+              '& .MuiDataGrid-row:hover': {
+                bgcolor: 'rgba(0,0,0,0.02)',
+                cursor: 'pointer',
+              },
+              '& .MuiDataGrid-row.Mui-selected': {
+                bgcolor: 'rgba(45, 157, 90, 0.08) !important',
+                borderLeft: `4px solid ${brand.green}`,
+                '&:hover': {
+                  bgcolor: 'rgba(45, 157, 90, 0.12) !important',
+                },
+              },
+              '& .MuiDataGrid-cell:focus': {
+                outline: 'none',
+              },
+              '& .MuiDataGrid-columnHeader:focus': {
+                outline: 'none',
+              },
+            }}
+
           />
         </Box>
       </Paper>
@@ -347,83 +417,166 @@ export function InvestigationCasesPage() {
       {!selected ? (
         <Alert severity="info">Select a case to view and add notes.</Alert>
       ) : (
-        <Paper sx={{ p: 2 }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} gap={2} justifyContent="space-between">
-            <Box>
-              <Typography sx={{ fontWeight: 950 }}>{selected.title}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {selected.source} · {selected.ref ?? '—'} · Assignee: {selected.assignee}
+        <Paper sx={{ p: 3, position: 'relative', overflow: 'hidden' }}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: 4,
+              height: '100%',
+              bgcolor: selected.status === 'Closed' ? brand.green : brand.greenBright,
+            }}
+          />
+          <Stack direction={{ xs: 'column', md: 'row' }} gap={3}>
+            <Box sx={{ flex: 1 }}>
+              <Stack direction="row" alignItems="center" gap={1.5} sx={{ mb: 0.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, color: brand.black }}>
+                  {selected.title}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={selected.status}
+                  sx={{
+                    bgcolor: selected.status === 'Closed' ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0,0,0,0.05)',
+                    color: selected.status === 'Closed' ? '#d32f2f' : brand.black,
+                    fontWeight: 700,
+                  }}
+
+                />
+              </Stack>
+              <Typography variant="body2" sx={{ color: brand.gray600, mb: 1.5 }}>
+                 {selected.id} · {selected.source} · Subject: {selected.subject || 'N/A'}
               </Typography>
-              {selected.ref && isRemittanceRef(selected.ref) ? (
+
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 2 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>
+                    Assignee
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.assignee}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>
+                    Reference
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.ref || '—'}</Typography>
+                    {selected.ref && isRemittanceRef(selected.ref) && (
+                      <Link
+                        component={RouterLink}
+                        to={remittanceSearchHref(selected.ref)}
+                        sx={{ display: 'inline-flex', color: brand.green }}
+                      >
+                        <OpenInNewOutlinedIcon sx={{ fontSize: 16 }} />
+                      </Link>
+                    )}
+                  </Box>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>
+                    Priority
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.priority}</Typography>
+                </Box>
+              </Box>
+
+              <Stack direction="row" gap={1} sx={{ mt: 2 }}>
                 <Button
                   size="small"
-                  component={RouterLink}
-                  to={remittanceSearchHref(selected.ref)}
-                  endIcon={<OpenInNewOutlinedIcon sx={{ fontSize: 18 }} />}
-                  sx={{ mt: 1, alignSelf: 'flex-start' }}
+                  variant={selected.status === 'Open' ? 'contained' : 'outlined'}
+                  color={selected.status === 'Open' ? 'primary' : 'inherit'}
+                  onClick={() => void handleStatus(selected.id, 'Open')}
+                  sx={{ borderRadius: '8px' }}
                 >
-                  Open remittance in Search &amp; Tracking
+                  Open
                 </Button>
-              ) : null}
+                <Button
+                  size="small"
+                  variant={selected.status === 'Investigating' ? 'contained' : 'outlined'}
+                  color={selected.status === 'Investigating' ? 'primary' : 'inherit'}
+                  onClick={() => void handleStatus(selected.id, 'Investigating')}
+                  sx={{ borderRadius: '8px' }}
+                >
+                  Investigating
+                </Button>
+                <Button
+                  size="small"
+                  variant={selected.status === 'Closed' ? 'contained' : 'outlined'}
+                  color={selected.status === 'Closed' ? 'error' : 'inherit'}
+                  onClick={() => void handleStatus(selected.id, 'Closed')}
+                  sx={{ borderRadius: '8px', ml: 'auto' }}
+                >
+                  Close Case
+                </Button>
+
+              </Stack>
+
             </Box>
-            <Stack direction="row" gap={1} flexWrap="wrap">
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => void setCaseStatus(selected.id, 'Open')}
-              >
-                Open
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => void setCaseStatus(selected.id, 'Investigating')}
-              >
-                Investigating
-              </Button>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={() => void setCaseStatus(selected.id, 'Closed')}
-              >
-                Close
-              </Button>
-            </Stack>
-          </Stack>
-          <Stack direction={{ xs: 'column', md: 'row' }} gap={1.5} sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Add note"
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-            />
-            <Button
-              variant="contained"
-              onClick={() => {
-                if (!noteText.trim()) return
-                void addCaseNote(selected.id, 'Analyst', noteText.trim()).then(() => setNoteText(''))
-              }}
-            >
-              Add
-            </Button>
-          </Stack>
-          <Stack spacing={1} sx={{ mt: 2 }}>
-            {selected.notes.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No notes.
+
+            <Box sx={{ flex: 1.2, bgcolor: 'rgba(0,0,0,0.015)', p: 2, borderRadius: 3, border: '1px solid rgba(0,0,0,0.05)' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: brand.green }} />
+                Case Activity & Notes
               </Typography>
-            ) : (
-              selected.notes.map((n, idx) => (
-                <Paper key={`${n.at}-${idx}`} variant="outlined" sx={{ p: 1.25, borderColor: 'divider' }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {n.at} · {n.by}
+              
+              <Stack direction="row" gap={1} sx={{ mb: 2 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Type a note..."
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  sx={{ bgcolor: 'white' }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => {
+                    void handleNote()
+                  }}
+                >
+                  Post
+                </Button>
+              </Stack>
+
+
+              <Stack spacing={1} sx={{ maxHeight: 240, overflowY: 'auto', pr: 0.5 }}>
+                {selected.notes.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                    No activity recorded yet.
                   </Typography>
-                  <Typography variant="body2">{n.text}</Typography>
-                </Paper>
-              ))
-            )}
+                ) : (
+                  [...selected.notes].reverse().map((n, idx) => (
+                    <Box key={`${n.at}-${idx}`} sx={{ mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.25 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: brand.black }}>
+                          {n.by}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {n.at}
+                        </Typography>
+                      </Box>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1.25,
+                          bgcolor: 'white',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: '4px 12px 12px 12px',
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ lineHeight: 1.4 }}>{n.text}</Typography>
+                      </Paper>
+                    </Box>
+                  ))
+                )}
+              </Stack>
+            </Box>
           </Stack>
         </Paper>
+
       )}
 
       <Dialog open={newOpen} onClose={() => !newSubmitting && setNewOpen(false)} maxWidth="sm" fullWidth>
