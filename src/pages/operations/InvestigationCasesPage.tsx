@@ -34,6 +34,7 @@ import {
   createCase,
   loadCases,
   setCaseStatus,
+  syncInvestigationCasesFromLive,
   type CaseSource,
   type InvestigationCase,
 } from '../../state/caseStore'
@@ -95,6 +96,45 @@ export function InvestigationCasesPage() {
     })
     setNewError(null)
     setNewOpen(true)
+  }
+
+  async function submitNewCase() {
+    if (newSubmitting) return
+
+    const title = newForm.title.trim()
+    const assignee = newForm.assignee.trim()
+    const ref = newForm.ref.trim()
+    const subject = newForm.subject.trim()
+    const note = newForm.note.trim()
+
+    if (!title) {
+      setNewError('Title is required.')
+      return
+    }
+
+    setNewSubmitting(true)
+    setNewError(null)
+    try {
+      const c = await createCase({
+        title,
+        source: newForm.source,
+        ref: ref || undefined,
+        subject: subject || undefined,
+        priority: newForm.priority,
+        status: 'Open',
+        assignee: assignee || 'Compliance-01',
+        note: note || undefined,
+      })
+
+      // In live mode, some backends normalize fields; reload list to avoid stale UI snapshots.
+      await syncInvestigationCasesFromLive().catch(() => undefined)
+      setNewOpen(false)
+      setSelectedId(c.id)
+    } catch (e) {
+      setNewError(e instanceof Error ? e.message : 'Could not create case')
+    } finally {
+      setNewSubmitting(false)
+    }
   }
 
   function clearFilters() {
@@ -480,28 +520,7 @@ export function InvestigationCasesPage() {
             variant="contained"
             disabled={newSubmitting}
             onClick={() => {
-              setNewSubmitting(true)
-              setNewError(null)
-              void createCase({
-                title: newForm.title || 'Case',
-                source: newForm.source,
-                ref: newForm.ref || undefined,
-                subject: newForm.subject || undefined,
-                priority: newForm.priority,
-                status: 'Open',
-                assignee: newForm.assignee || 'Compliance-01',
-                note: newForm.note || undefined,
-              })
-                .then((c) => {
-                  setNewOpen(false)
-                  setSelectedId(c.id)
-                })
-                .catch((e) => {
-                  setNewError(e instanceof Error ? e.message : 'Could not create case')
-                })
-                .finally(() => {
-                  setNewSubmitting(false)
-                })
+              void submitNewCase()
             }}
           >
             {newSubmitting ? 'Creating...' : 'Create'}
