@@ -62,7 +62,6 @@ export function AdminLayout() {
   const [operationalNotes, setOperationalNotes] = useState<ReturnType<typeof loadOperationalNotifications>>([])
 
   const [companyName, setCompanyName] = useState(() => loadCompanySettings().companyName)
-  const [shortName, setShortName] = useState(() => loadCompanySettings().shortName)
   const [branchName] = useState(() => 'Head Office')
   const [logoDataUrl, setLogoDataUrl] = useState(() => loadCompanySettings().logoDataUrl || '')
   const [searchQuery, setSearchQuery] = useState('')
@@ -73,7 +72,6 @@ export function AdminLayout() {
     const update = () => {
       const s = loadCompanySettings()
       setCompanyName(s.companyName)
-      setShortName(s.shortName)
       setLogoDataUrl(s.logoDataUrl || '')
     }
     update()
@@ -185,13 +183,17 @@ export function AdminLayout() {
             <Stack direction="row" alignItems="center" gap={1.25}>
               <Box
                 sx={{
-                  p: 0.5,
-                  borderRadius: 2,
-                  bgcolor: 'rgba(255,255,255,0.06)',
-                  border: `1px solid ${layout.sidebarBorder}`,
+                  width: 46,
+                  height: 46,
+                  borderRadius: '50%',
+                  bgcolor: 'rgba(255,255,255,0.96)',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  display: 'grid',
+                  placeItems: 'center',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.4)',
                 }}
               >
-                <BrandLogo size={34} src={logoDataUrl || undefined} />
+                <BrandLogo size={30} src={logoDataUrl || undefined} />
               </Box>
               <Box>
                 <Typography
@@ -478,12 +480,7 @@ export function AdminLayout() {
                 }}
               >
                 <Stack direction="row" alignItems="center" gap={1}>
-                  <Avatar
-                    src={logoDataUrl || undefined}
-                    sx={{ bgcolor: brand.black, color: brand.white, width: 34, height: 34 }}
-                  >
-                    {(shortName || companyName || 'HO').slice(0, 2).toUpperCase()}
-                  </Avatar>
+                  <BrandLogo size={34} src={logoDataUrl || undefined} />
                   <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
                     <Typography variant="body2" sx={{ fontWeight: 900, lineHeight: 1.1 }}>
                       {companyName}

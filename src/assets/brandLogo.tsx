@@ -1,5 +1,17 @@
-import { Avatar, Box } from '@mui/material'
-import { brand } from '../theme/appTheme'
+import { Box } from '@mui/material'
+
+const DEFAULT_MARK_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="120 40 360 540" role="img" aria-label="Uttara Bank mark">
+  <g fill="#006b2d">
+    <path d="M300 54L176 214l38 28 86-111 86 111 38-28z"/>
+    <rect x="278" y="130" width="44" height="160" rx="8"/>
+    <path d="M140 275h74v167c0 36 25 64 58 64s58-28 58-64V275h74v167c0 78-56 138-132 138S140 520 140 442z"/>
+    <path fill-rule="evenodd" d="M392 298a136 136 0 1 1 0 272 136 136 0 0 1 0-272m0 66a70 70 0 1 0 0 140 70 70 0 0 0 0-140"/>
+  </g>
+</svg>
+`.trim()
+
+const DEFAULT_MARK_DATA_URL = `data:image/svg+xml;utf8,${encodeURIComponent(DEFAULT_MARK_SVG)}`
 
 export function BrandLogo({
   size = 34,
@@ -10,58 +22,18 @@ export function BrandLogo({
   src?: string
   alt?: string
 }) {
-  if (src) {
-    return (
-      <Avatar
-        variant="rounded"
-        src={src}
-        alt={alt}
-        sx={{
-          width: size,
-          height: size,
-          borderRadius: 2,
-          bgcolor: 'rgba(255,255,255,0.32)',
-          border: '1px solid rgba(0,0,0,0.14)',
-        }}
-      />
-    )
-  }
-
   return (
     <Box
-      aria-hidden="true"
+      component="img"
+      src={src && src.trim() !== '' ? src : DEFAULT_MARK_DATA_URL}
+      alt={alt}
       sx={{
         width: size,
         height: size,
-        borderRadius: 12,
-        display: 'grid',
-        placeItems: 'center',
-        bgcolor: 'rgba(255,255,255,0.32)',
-        border: '1px solid rgba(0,0,0,0.14)',
-        boxShadow: '0 10px 16px -14px rgba(0,0,0,0.55)',
-        position: 'relative',
-        overflow: 'hidden',
+        display: 'block',
+        objectFit: 'contain',
       }}
-    >
-      <Box
-        sx={{
-          width: size * 0.62,
-          height: size * 0.62,
-          borderRadius: 999,
-          bgcolor: brand.black,
-          opacity: 0.9,
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          inset: -20,
-          transform: 'rotate(25deg)',
-          background:
-            'linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.0) 100%)',
-        }}
-      />
-    </Box>
+    />
   )
 }
 
