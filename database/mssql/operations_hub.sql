@@ -34,6 +34,20 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.ops_sms_outbox', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.ops_sms_outbox (
+    id VARCHAR(36) NOT NULL CONSTRAINT pk_ops_sms_outbox PRIMARY KEY,
+    recipient_msisdn NVARCHAR(64) NOT NULL,
+    message_preview NVARCHAR(1000) NOT NULL,
+    provider NVARCHAR(128) NULL,
+    created_at DATETIME2 NOT NULL CONSTRAINT df_ops_sms_outbox_created DEFAULT SYSUTCDATETIME(),
+    status VARCHAR(32) NOT NULL CONSTRAINT df_ops_sms_outbox_status DEFAULT N'queued'
+  );
+  CREATE INDEX ix_ops_sms_outbox_created ON dbo.ops_sms_outbox (created_at DESC);
+END
+GO
+
 IF OBJECT_ID(N'dbo.ops_feedback_log', N'U') IS NULL
 BEGIN
   CREATE TABLE dbo.ops_feedback_log (

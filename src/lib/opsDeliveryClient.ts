@@ -4,7 +4,11 @@
  */
 
 import type { EmailOutboxItem, OperationalNotification } from '../integrations/operationsHub/types'
-import { opsEmailSendApiConfigured, opsPushSendApiConfigured } from './operationsHubProduction'
+import {
+  opsEmailSendApiConfigured,
+  opsPushSendApiConfigured,
+  opsSmsSendApiConfigured,
+} from './operationsHubProduction'
 
 export type OpsEmailDeliveryPayload = {
   id: string
@@ -30,6 +34,18 @@ export type OpsPushDeliveryPayload = {
   read: boolean
   /** When set, FCM sends to this device token; otherwise the server uses topic (e.g. ops-alerts). */
   fcmToken?: string
+}
+
+export type OpsSmsDeliveryPayload = {
+  id: string
+  kind: string
+  severity: 'info' | 'warning' | 'critical'
+  title: string
+  body: string
+  remittanceNo?: string
+  createdAt: string
+  to?: string
+  senderId?: string
 }
 
 export function mapKindToSeverity(kind: OperationalNotification['kind']): OpsPushDeliveryPayload['severity'] {
@@ -65,6 +81,24 @@ export function mapOutboxToEmailPayload(row: EmailOutboxItem): OpsEmailDeliveryP
     reportRef: row.reportRef,
     createdAt: row.createdAt,
     status: row.status,
+  }
+}
+
+export function mapNotificationToSmsPayload(
+  n: OperationalNotification,
+  to?: string,
+  senderId?: string,
+): OpsSmsDeliveryPayload {
+  return {
+    id: n.id,
+    kind: n.kind,
+    severity: mapKindToSeverity(n.kind),
+    title: n.title,
+    body: n.body,
+    remittanceNo: n.remittanceNo,
+    createdAt: n.createdAt,
+    ...(to != null && to.trim() !== '' ? { to: to.trim() } : {}),
+    ...(senderId != null && senderId.trim() !== '' ? { senderId: senderId.trim() } : {}),
   }
 }
 
@@ -114,6 +148,14 @@ export async function postOpsPushDelivery(payload: OpsPushDeliveryPayload): Prom
   return postDeliveryJson(resolveRequestUrl(url), payload)
 }
 
+export async function postOpsSmsDelivery(payload: OpsSmsDeliveryPayload): Promise<OpsDeliveryResult> {
+  const url = String(import.meta.env.VITE_OPS_SMS_SEND_API_URL ?? '').trim()
+  if (!url) {
+    return { ok: false, status: 0, message: 'VITE_OPS_SMS_SEND_API_URL is not set' }
+  }
+  return postDeliveryJson(resolveRequestUrl(url), payload)
+}
+
 async function postDeliveryJson(url: string, body: unknown): Promise<OpsDeliveryResult> {
   try {
     const res = await fetch(url, {
@@ -143,6 +185,16 @@ async function postDeliveryJson(url: string, body: unknown): Promise<OpsDelivery
 export function postOpsPushDeliveryIfConfigured(n: OperationalNotification, fcmToken?: string): void {
   if (!opsPushSendApiConfigured()) return
   void postOpsPushDelivery(mapNotificationToPushPayload(n, fcmToken))
+}
+
+/** Fire-and-forget when sms URL is configured (return/stop/system alerts). */
+export function postOpsSmsDeliveryIfConfigured(
+  n: OperationalNotification,
+  to?: string,
+  senderId?: string,
+): void {
+  if (!opsSmsSendApiConfigured()) return
+  void postOpsSmsDelivery(mapNotificationToSmsPayload(n, to, senderId))
 }
 
 /** POST outbox row to email worker, then mark sent when API succeeds. */

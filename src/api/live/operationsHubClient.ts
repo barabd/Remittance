@@ -10,6 +10,7 @@ import type {
   FeedbackSource,
   OperationalNotification,
   OperationalNotificationKind,
+  SmsOutboxItem,
 } from '../../integrations/operationsHub/types'
 
 export function liveListOpsNotifications() {
@@ -69,6 +70,26 @@ export function liveCreateEmailOutbox(body: {
 
 export function livePatchEmailOutbox(id: string, status: EmailOutboxItem['status']) {
   return apiPatch<EmailOutboxItem>(`/operations/email-outbox/${encodeURIComponent(id)}`, { status })
+}
+
+export function liveListSmsOutbox() {
+  return apiGet<SmsOutboxItem[]>('/operations/sms-outbox')
+}
+
+export function liveCreateSmsOutbox(body: {
+  to: string
+  messagePreview: string
+  provider?: string
+}) {
+  return apiPost<SmsOutboxItem>('/operations/sms-outbox', {
+    to: body.to,
+    messagePreview: body.messagePreview,
+    ...(body.provider ? { provider: body.provider } : {}),
+  } as Record<string, unknown>)
+}
+
+export function livePatchSmsOutbox(id: string, status: SmsOutboxItem['status']) {
+  return apiPatch<SmsOutboxItem>(`/operations/sms-outbox/${encodeURIComponent(id)}`, { status })
 }
 
 export function liveListFeedbackLog() {

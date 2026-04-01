@@ -3,7 +3,7 @@
  */
 
 import { STORAGE_KEYS, STORAGE_LIMITS } from './constants'
-import type { EmailOutboxItem, FeedbackLogEntry, OperationalNotification } from './types'
+import type { EmailOutboxItem, FeedbackLogEntry, OperationalNotification, SmsOutboxItem } from './types'
 
 export function loadLocalNotifications(): OperationalNotification[] {
   try {
@@ -37,6 +37,23 @@ export function saveLocalEmailOutbox(rows: EmailOutboxItem[]) {
   localStorage.setItem(
     STORAGE_KEYS.emailOutbox,
     JSON.stringify(rows.slice(0, STORAGE_LIMITS.emailOutbox)),
+  )
+}
+
+export function loadLocalSmsOutbox(): SmsOutboxItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.smsOutbox)
+    if (!raw) return []
+    return JSON.parse(raw) as SmsOutboxItem[]
+  } catch {
+    return []
+  }
+}
+
+export function saveLocalSmsOutbox(rows: SmsOutboxItem[]) {
+  localStorage.setItem(
+    STORAGE_KEYS.smsOutbox,
+    JSON.stringify(rows.slice(0, STORAGE_LIMITS.smsOutbox)),
   )
 }
 

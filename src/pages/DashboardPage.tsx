@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -10,6 +11,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import { brand } from '../theme/appTheme'
+import { useLiveApi } from '../api/config'
 import {
   getMastersDashboardCounts,
   MASTERS_CHANGED_EVENT,
@@ -84,6 +86,7 @@ function KpiCard({
 
 export function DashboardPage() {
   const theme = useTheme()
+  const live = useLiveApi()
   const [masterKpis, setMasterKpis] = useState(() => getMastersDashboardCounts())
   const [ops, setOps] = useState(() => loadOpsMetrics())
   const [amlOpen, setAmlOpen] = useState(() => openAmlAlertCount())
@@ -117,13 +120,26 @@ export function DashboardPage() {
           Dashboard
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          KPIs refresh from worklists, master data, and AML store (demo persistence). Settlement, integrations, and
-          incentive distribution coverage extends features 31–40; incentive distribution now supports live rails.
+          Production command center for worklists, master data, AML alerts, settlement operations, integrations, and
+          incentive distribution.
         </Typography>
       </Box>
 
+      <Alert severity={live ? 'success' : 'warning'}>
+        {live
+          ? 'Live rails enabled: KPIs and workflows are connected to API-backed modules.'
+          : 'Live rails disabled: currently using local/demo persistence. Enable VITE_USE_LIVE_API=true for production behavior.'}
+      </Alert>
+
       <Paper sx={{ p: 2 }}>
-        <Typography sx={{ fontWeight: 900, mb: 1.5 }}>RFP demo shortcuts (31–40)</Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+          <Typography sx={{ fontWeight: 900 }}>Operational shortcuts (features 31-40)</Typography>
+          <Chip
+            size="small"
+            label={live ? 'Live mode' : 'Demo mode'}
+            sx={{ bgcolor: live ? 'rgba(66,171,72,0.14)' : 'rgba(0,0,0,0.06)', color: live ? brand.green : brand.black }}
+          />
+        </Stack>
         <Stack direction="row" gap={1} flexWrap="wrap">
           <Button component={RouterLink} to="/operations/settlement-regulatory" variant="outlined" size="small">
             Settlement & regulatory
@@ -135,7 +151,7 @@ export function DashboardPage() {
             Incentive distribution
           </Button>
           <Button component={RouterLink} to="/compliance/alerts" variant="outlined" size="small">
-            Screening mode
+            AML alerts
           </Button>
         </Stack>
       </Paper>

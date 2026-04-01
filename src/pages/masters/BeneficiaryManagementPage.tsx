@@ -53,6 +53,11 @@ export function BeneficiaryManagementPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = useMemo(() => rows.find((r) => r.id === selectedId) ?? null, [rows, selectedId])
 
+  useEffect(() => {
+    if (!selectedId) return
+    if (!rows.some((r) => r.id === selectedId)) setSelectedId(null)
+  }, [rows, selectedId])
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saveBusy, setSaveBusy] = useState(false)
@@ -110,21 +115,31 @@ export function BeneficiaryManagementPage() {
 
   async function saveForm() {
     if (!form.fullName.trim() || !form.phone.trim()) return
+
+    const payload = {
+      fullName: form.fullName.trim(),
+      phone: form.phone.trim(),
+      idDocumentRef: form.idDocumentRef.trim(),
+      bankName: form.bankName.trim(),
+      bankAccountMasked: form.bankAccountMasked.trim(),
+      branch: form.branch.trim() || 'Head Office',
+      notes: form.notes.trim() || undefined,
+    }
+
     setSaveBusy(true)
     setSaveNotice(null)
     try {
       if (editingId) {
-        await updateBeneficiary(editingId, { ...form })
+        const updated = await updateBeneficiary(editingId, payload)
+        if (!updated) {
+          setSaveNotice({ severity: 'error', message: 'Selected beneficiary no longer exists. Please refresh and retry.' })
+          return
+        }
+        setSelectedId(updated.id)
         setSaveNotice({ severity: 'success', message: `Beneficiary updated: ${editingId}` })
       } else {
         const created = await addBeneficiary({
-          fullName: form.fullName.trim(),
-          phone: form.phone.trim(),
-          idDocumentRef: form.idDocumentRef.trim(),
-          bankName: form.bankName.trim(),
-          bankAccountMasked: form.bankAccountMasked.trim(),
-          branch: form.branch.trim() || 'Head Office',
-          notes: form.notes.trim() || undefined,
+          ...payload,
         })
         setSelectedId(created.id)
         setSaveNotice({ severity: 'success', message: `Beneficiary created: ${created.id}` })
@@ -356,7 +371,7 @@ export function BeneficiaryManagementPage() {
         </Box>
       </Paper>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={() => !saveBusy && setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingId ? 'Edit beneficiary' : 'New beneficiary'}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 1 }}>
