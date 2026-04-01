@@ -21,7 +21,6 @@ import { useLiveApi } from '../../api/config'
 import {
   getMlaSettingsFromLive,
   pushMlaSettingsToLive,
-  syncMlaSettingsFromLive,
 } from '../../integrations/mlaSettings/mlaSettingsRepository'
 import {
   AML_COMPLIANCE_SETTINGS_EVENT,

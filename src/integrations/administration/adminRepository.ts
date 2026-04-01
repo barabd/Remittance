@@ -11,7 +11,7 @@ function live() { return import.meta.env.VITE_USE_LIVE_API === 'true' }
 export async function getBranches(): Promise<any[]> {
   if (live()) {
     try {
-      return (await liveGetBranches()).items ?? []
+      return await liveGetBranches()
     } catch {}
   }
   return []
@@ -37,7 +37,7 @@ export async function updateBranch(id: string, patch: any): Promise<any> {
 
 export async function getPrivilegedAudit(): Promise<any[]> {
   if (live()) {
-    try { return (await liveGetPrivilegedAudit()).items ?? [] } catch {}
+    try { return await liveGetPrivilegedAudit() } catch {}
   }
   return []
 }

@@ -18,9 +18,28 @@ import { Link as RouterLink } from 'react-router-dom'
 import { useLiveApi } from '../../api/config'
 import { ApiHttpError } from '../../api/http'
 import { liveGetComplianceRulesReadiness } from '../../api/live/client'
-import type { ComplianceRulesReadinessDto } from '../../api/types'
 import { loadAmlComplianceSettings } from '../../state/amlComplianceSettingsStore'
 import { loadAmlAlerts } from '../../state/amlAlertsStore'
+
+type ComplianceRulesReadinessDto = {
+  generatedAt: string
+  backend: {
+    ok: boolean
+    service: string
+  }
+  database: {
+    mlaSettingsSeeded: boolean
+    screeningMode: string
+    remittanceRecordCount: number
+    remittancePendingApprovalCount: number
+    amlAlertOpenCount: number
+    emailOutboxQueuedCount: number
+  }
+  integrations: {
+    smtpEnabled: boolean
+    emailOutboxMode: string
+  }
+}
 
 const bdBlocks = [
   {
@@ -121,7 +140,7 @@ export function RulesReferencePage() {
     setLoading(true)
     setLiveError(null)
     try {
-      const dto = await liveGetComplianceRulesReadiness()
+      const dto = (await liveGetComplianceRulesReadiness()) as ComplianceRulesReadinessDto
       setReadiness({ ...dto, source: 'live' })
     } catch (e) {
       const msg =
