@@ -41,6 +41,7 @@ import {
   queueEmailToExchangeHouse,
   refreshOperationsHubSnapshot,
   resetOutboxItemToQueued,
+  SMS_OUTBOX_EVENT,
   type EmailOutboxItem,
   type FeedbackLogEntry,
   type FeedbackSource,
@@ -52,6 +53,7 @@ import {
   OPS_PRODUCTION_NOTES,
   opsEmailSendApiConfigured,
   opsPushSendApiConfigured,
+  opsSmsSendApiConfigured,
 } from '../../lib/operationsHubProduction'
 import { brand } from '../../theme/appTheme'
 
@@ -134,10 +136,12 @@ export function OperationsHubPage() {
     }
     window.addEventListener(OPERATIONAL_NOTIFICATIONS_EVENT, onChange as EventListener)
     window.addEventListener(EMAIL_OUTBOX_EVENT, onChange as EventListener)
+    window.addEventListener(SMS_OUTBOX_EVENT, onChange as EventListener)
     window.addEventListener(FEEDBACK_LOG_EVENT, onChange as EventListener)
     return () => {
       window.removeEventListener(OPERATIONAL_NOTIFICATIONS_EVENT, onChange as EventListener)
       window.removeEventListener(EMAIL_OUTBOX_EVENT, onChange as EventListener)
+      window.removeEventListener(SMS_OUTBOX_EVENT, onChange as EventListener)
       window.removeEventListener(FEEDBACK_LOG_EVENT, onChange as EventListener)
     }
   }, [refresh])
@@ -154,6 +158,7 @@ export function OperationsHubPage() {
 
   const emailConfigured = opsEmailSendApiConfigured()
   const pushConfigured = opsPushSendApiConfigured()
+  const smsConfigured = opsSmsSendApiConfigured()
 
   async function submitCompose() {
     if (!compose.to.trim() || !compose.subject.trim()) return
@@ -196,10 +201,7 @@ export function OperationsHubPage() {
         </Typography>
       </Box>
 
-      <Alert
-        severity={emailConfigured && pushConfigured ? 'success' : 'info'}
-        sx={{ borderRadius: 2 }}
-      >
+      <Alert severity={emailConfigured && pushConfigured && smsConfigured ? 'success' : 'info'} sx={{ borderRadius: 2 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
           Production delivery
         </Typography>
@@ -213,12 +215,20 @@ export function OperationsHubPage() {
           <Box component="span" sx={{ fontWeight: pushConfigured ? 800 : 600 }}>
             {pushConfigured ? 'configured' : 'not set'}
           </Box>
+          {' · '}
+          SMS API:{' '}
+          <Box component="span" sx={{ fontWeight: smsConfigured ? 800 : 600 }}>
+            {smsConfigured ? 'configured' : 'not set'}
+          </Box>
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
           {OPS_PRODUCTION_NOTES.email}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           {OPS_PRODUCTION_NOTES.push}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {OPS_PRODUCTION_NOTES.sms}
         </Typography>
         {pushConfigured ? (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>

@@ -24,6 +24,31 @@ let remittanceRecords = [
   { id: 'REM-2026-000186', remittanceNo: 'REM-2026-000186', exchangeHouse: 'EH-GULF-01', createdAt: '2026-03-25 10:33', corridor: 'SAR → BDT', amount: '1,200.00 SAR', remitter: 'Mohammed Faisal', beneficiary: 'Nusrat Jahan', maker: 'Branch-02', status: 'On Hold', channel: 'RTGS', photoIdType: 'Passport', photoIdRef: 'PPT-SA-99102' },
 ]
 
+let blockedRemittances = [
+  {
+    id: 'BR-001',
+    remittanceNo: 'REM-BLOCK-001',
+    remitter: 'Demo Sender Ltd',
+    beneficiary: 'Pending KYC User',
+    corridor: 'GBP → BDT',
+    amount: '1,200.00 GBP',
+    blockedAt: '2026-03-24 11:20',
+    branch: 'Head Office',
+    note: 'Compliance hold - awaiting docs',
+  },
+  {
+    id: 'BR-002',
+    remittanceNo: 'REM-BLOCK-002',
+    remitter: 'Abid Rahman',
+    beneficiary: 'Karim Mia',
+    corridor: 'AED → BDT',
+    amount: '4,000.00 AED',
+    blockedAt: '2026-03-24 12:10',
+    branch: 'Branch-01',
+    note: 'Manual review',
+  },
+]
+
 let mlaSettings = {
   screeningMode: 'keywords',
   requirePhotoId: true,
@@ -191,11 +216,8 @@ function generateQueue() {
 
 function generateBlockedRemittances() {
   return {
-    total: 8,
-    items: [
-      { id: 'BR-001', remittanceNo: 'REM-BLOCK-001', reason: 'AML Match', blockedAt: '2024-03-20' },
-      { id: 'BR-002', remittanceNo: 'REM-BLOCK-002', reason: 'Manual Review', blockedAt: '2024-03-19' },
-    ],
+    total: blockedRemittances.length,
+    items: blockedRemittances,
   }
 }
 
@@ -407,6 +429,27 @@ async function handleRequest(req, res, pathname, method) {
   if (pathname === '/api/v1/exchange-house/blocked-remittances' && method === 'GET') {
     return sendJson(res, 200, generateBlockedRemittances())
   }
+  if (pathname.match(/^\/api\/v1\/exchange-house\/blocked-remittances\/[^/]+$/) && method === 'PATCH') {
+    const id = pathname.split('/')[5]
+    const body = await readJsonBody(req)
+    const idx = blockedRemittances.findIndex((r) => r.id === id)
+    if (idx < 0) return sendJson(res, 404, { error: 'Blocked remittance not found' })
+    blockedRemittances[idx] = {
+      ...blockedRemittances[idx],
+      ...body,
+      id: blockedRemittances[idx].id,
+    }
+    return sendJson(res, 200, blockedRemittances[idx])
+  }
+  if (pathname.match(/^\/api\/v1\/exchange-house\/blocked-remittances\/[^/]+$/) && method === 'DELETE') {
+    const id = pathname.split('/')[5]
+    const idx = blockedRemittances.findIndex((r) => r.id === id)
+    if (idx < 0) return sendJson(res, 404, { error: 'Blocked remittance not found' })
+    blockedRemittances.splice(idx, 1)
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*' })
+    res.end()
+    return
+  }
 
   // Compliance MLAs
   if (pathname === '/api/v1/compliance/mla-settings' && method === 'GET') {
@@ -570,6 +613,24 @@ async function handleRequest(req, res, pathname, method) {
     }
     return sendJson(res, 404, { error: 'Agent not found' })
   }
+  if (pathname.match(/^\/api\/v1\/agents\/[^/]+\/reject$/) && method === 'POST') {
+    const id = pathname.split('/')[4]
+    const body = await readJsonBody(req)
+    const idx = mastersAgents.findIndex(a => a.id === id)
+    if (idx >= 0) {
+      mastersAgents[idx].status = 'Rejected'
+      mastersAgents[idx].checker = body.checkerUser || 'HO-Checker'
+      if (!mastersAudits[id]) mastersAudits[id] = []
+      mastersAudits[id].push({
+        at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        actor: body.checkerUser || 'HO-Checker',
+        action: 'Rejected (Master)',
+        details: body.reason || undefined,
+      })
+      return sendJson(res, 200, mastersAgents[idx])
+    }
+    return sendJson(res, 404, { error: 'Agent not found' })
+  }
   if (pathname.match(/^\/api\/v1\/agents\/[^/]+$/) && method === 'PATCH') {
     const id = pathname.split('/').pop()
     const body = await readJsonBody(req)
@@ -582,6 +643,7 @@ async function handleRequest(req, res, pathname, method) {
     }
     return sendJson(res, 404, { error: 'Agent not found' })
   }
+
 
   // Beneficiaries Master
   if (pathname === '/api/v1/beneficiaries' && method === 'GET') {
@@ -598,7 +660,101 @@ async function handleRequest(req, res, pathname, method) {
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
     }
     mastersBeneficiaries.unshift(record)
+    if (!mastersAudits[id]) mastersAudits[id] = []
+    mastersAudits[id].push({
+      at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      actor: record.maker || 'Branch-User',
+      action: 'Registered (pending approval)',
+      details: 'Payout beneficiary submitted for maker-checker review.'
+    })
     return sendJson(res, 201, record)
+  }
+
+  if (pathname.match(/^\/api\/v1\/beneficiaries\/[^/]+$/) && method === 'PATCH') {
+    const id = pathname.split('/').pop()
+    const body = await readJsonBody(req)
+    const idx = mastersBeneficiaries.findIndex(b => b.id === id)
+    if (idx >= 0) {
+      const prev = mastersBeneficiaries[idx]
+      const next = { ...prev, ...body, id: prev.id }
+
+      const identityChanged =
+        body.fullName !== undefined ||
+        body.phone !== undefined ||
+        body.bankName !== undefined ||
+        body.bankAccountMasked !== undefined
+
+      if (identityChanged && prev.status === 'Active') {
+        next.status = 'Pending Approval'
+        next.checker = undefined
+        next.maker = 'HO-Maker'
+      }
+
+      mastersBeneficiaries[idx] = next
+      if (!mastersAudits[id]) mastersAudits[id] = []
+      const changedKeys = Object.keys(body)
+      mastersAudits[id].push({
+        at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        actor: next.maker || 'System',
+        action: 'Beneficiary record updated',
+        details: changedKeys.length ? changedKeys.join(', ') : undefined
+      })
+      return sendJson(res, 200, next)
+    }
+    return sendJson(res, 404, { error: 'Beneficiary not found' })
+  }
+
+  if (pathname.match(/^\/api\/v1\/beneficiaries\/[^/]+\/approve$/) && method === 'POST') {
+    const id = pathname.split('/')[4]
+    const body = await readJsonBody(req)
+    const idx = mastersBeneficiaries.findIndex(b => b.id === id)
+    if (idx >= 0) {
+      const checker = body.checkerUser || 'HO-Checker'
+      if ((mastersBeneficiaries[idx].status !== 'Pending Approval') && (mastersBeneficiaries[idx].status !== 'On Hold')) {
+        return sendJson(res, 400, { error: 'Bad Request', message: 'Beneficiary is not awaiting checker approval' })
+      }
+      mastersBeneficiaries[idx].status = 'Active'
+      mastersBeneficiaries[idx].checker = checker
+      if (!mastersAudits[id]) mastersAudits[id] = []
+      mastersAudits[id].push({
+        at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        actor: checker,
+        action: 'Approved (maker-checker)',
+        details: 'Beneficiary cleared for payout use (Active).'
+      })
+      return sendJson(res, 200, mastersBeneficiaries[idx])
+    }
+    return sendJson(res, 404, { error: 'Beneficiary not found' })
+  }
+
+  if (pathname.match(/^\/api\/v1\/beneficiaries\/[^/]+\/reject$/) && method === 'POST') {
+    const id = pathname.split('/')[4]
+    const body = await readJsonBody(req)
+    const idx = mastersBeneficiaries.findIndex(b => b.id === id)
+    if (idx >= 0) {
+      const checker = body.checkerUser || 'HO-Checker'
+      if ((mastersBeneficiaries[idx].status !== 'Pending Approval') && (mastersBeneficiaries[idx].status !== 'On Hold')) {
+        return sendJson(res, 400, { error: 'Bad Request', message: 'Beneficiary is not awaiting checker decision' })
+      }
+      mastersBeneficiaries[idx].status = 'Rejected'
+      mastersBeneficiaries[idx].checker = checker
+      if (!mastersAudits[id]) mastersAudits[id] = []
+      mastersAudits[id].push({
+        at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        actor: checker,
+        action: 'Rejected (maker-checker)',
+        details: body.reason ? `Reason: ${body.reason}` : undefined
+      })
+      return sendJson(res, 200, mastersBeneficiaries[idx])
+    }
+    return sendJson(res, 404, { error: 'Beneficiary not found' })
+  }
+
+  if (pathname.match(/^\/api\/v1\/beneficiaries\/[^/]+\/audit$/) && method === 'GET') {
+    const id = pathname.split('/')[4]
+    const exists = mastersBeneficiaries.some(b => b.id === id)
+    if (!exists) return sendJson(res, 404, { error: 'Beneficiary not found' })
+    return sendJson(res, 200, { events: mastersAudits[id] || [] })
   }
 
   // Integration connectors

@@ -27,3 +27,12 @@ CREATE TABLE frms_eh_bulk_row (
     incentive_bdt DECIMAL(18,2) NOT NULL,
     incentive_rule VARCHAR(100)
 );
+
+ALTER TABLE frms_eh_bulk_row
+ADD CONSTRAINT fk_eh_bulk_row_batch
+FOREIGN KEY (batch_id) REFERENCES frms_eh_bulk_batch(id);
+
+CREATE INDEX idx_eh_bulk_batch_created_at ON frms_eh_bulk_batch(created_at);
+CREATE INDEX idx_eh_bulk_batch_status ON frms_eh_bulk_batch(batch_status);
+CREATE INDEX idx_eh_bulk_row_batch_id ON frms_eh_bulk_row(batch_id);
+CREATE INDEX idx_eh_bulk_row_remittance_no ON frms_eh_bulk_row(remittance_no);

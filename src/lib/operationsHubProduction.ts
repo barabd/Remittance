@@ -14,9 +14,16 @@ export function opsPushSendApiConfigured(): boolean {
   return Boolean(String(import.meta.env.VITE_OPS_PUSH_SEND_API_URL ?? '').trim())
 }
 
+/** Backend route that forwards SMS payload to provider gateway. */
+export function opsSmsSendApiConfigured(): boolean {
+  return Boolean(String(import.meta.env.VITE_OPS_SMS_SEND_API_URL ?? '').trim())
+}
+
 export const OPS_PRODUCTION_NOTES = {
   email:
     'Queued rows can use “Send via production API” when VITE_OPS_EMAIL_SEND_API_URL is set. Java sends real SMTP when FRMS_OPS_MAIL_ENABLED=true and FRMS_SMTP_* are set; otherwise the API accepts the POST but does not send.',
   push:
     'New alerts POST to VITE_OPS_PUSH_SEND_API_URL. Java sends real FCM when FRMS_OPS_FCM_ENABLED=true and FRMS_FCM_CREDENTIALS_PATH (or _JSON) is set; else accepts without push. Topic default: ops-alerts.',
+  sms:
+    'New alerts POST to VITE_OPS_SMS_SEND_API_URL. Java forwards to FRMS_SMS_ENDPOINT_URL when FRMS_OPS_SMS_ENABLED=true; else accepts without SMS send.',
 } as const

@@ -256,7 +256,7 @@ export function AuditMonitoringPage() {
     window.setTimeout(() => setDemoMsg(null), 4000)
   }
 
-  function openPeriodicReport() {
+  async function openPeriodicReport() {
     const generated = new Date().toISOString()
     const meta: Record<string, unknown>[] = [
       { rowType: 'report_meta', field: 'Title', value: 'Periodic user activity audit report (A.2.2.1)' },
@@ -268,7 +268,7 @@ export function AuditMonitoringPage() {
       { rowType: 'report_meta', field: 'Acting role (demo)', value: actingRole },
     ]
     const combined = [...meta, ...exportRows.map((r) => ({ rowType: 'event', ...r }))]
-    openPrintableReportWindow('Periodic user activity audit report', combined)
+    await openPrintableReportWindow('Periodic user activity audit report', combined)
   }
 
   const cols: GridColDef<UserActivityAuditEntry>[] = [
@@ -670,7 +670,7 @@ export function AuditMonitoringPage() {
               color="secondary"
               startIcon={<PictureAsPdfOutlinedIcon />}
               disabled={exportRows.length === 0}
-              onClick={openPeriodicReport}
+              onClick={() => void openPeriodicReport()}
             >
               Periodic report (print / PDF)
             </Button>
@@ -678,7 +678,7 @@ export function AuditMonitoringPage() {
               variant="outlined"
               startIcon={<DownloadOutlinedIcon />}
               disabled={exportRows.length === 0}
-              onClick={() => exportRowsToExcel(exportRows, 'UserActivityAudit', `${baseName}.xlsx`)}
+              onClick={() => void exportRowsToExcel(exportRows, 'UserActivityAudit', `${baseName}.xlsx`)}
               sx={{ borderColor: 'divider' }}
             >
               Excel
@@ -687,7 +687,7 @@ export function AuditMonitoringPage() {
               variant="outlined"
               startIcon={<DownloadOutlinedIcon />}
               disabled={exportRows.length === 0}
-              onClick={() => exportRowsToCsv(exportRows, `${baseName}.csv`)}
+              onClick={() => void exportRowsToCsv(exportRows, `${baseName}.csv`)}
               sx={{ borderColor: 'divider' }}
             >
               CSV
@@ -714,7 +714,7 @@ export function AuditMonitoringPage() {
               variant="outlined"
               startIcon={<DownloadOutlinedIcon />}
               disabled={exportRows.length === 0}
-              onClick={() => openPrintableReportWindow('User activity audit', exportRows)}
+              onClick={() => void openPrintableReportWindow('User activity audit', exportRows)}
               sx={{ borderColor: 'divider' }}
             >
               PDF

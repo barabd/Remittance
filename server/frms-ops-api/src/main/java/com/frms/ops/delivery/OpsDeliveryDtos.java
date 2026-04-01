@@ -32,4 +32,15 @@ public final class OpsDeliveryDtos {
       String createdAt,
       Boolean read,
       String fcmToken) {}
+
+    public record SmsDeliveryRequest(
+            String id,
+            String kind,
+            String severity,
+            String title,
+            String body,
+            String remittanceNo,
+            String createdAt,
+            String to,
+            String senderId) {}
 }

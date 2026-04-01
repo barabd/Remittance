@@ -76,6 +76,13 @@ frms:
       credentials-path: ${FRMS_FCM_CREDENTIALS_PATH:}
       credentials-json: ${FRMS_FCM_CREDENTIALS_JSON:}
       topic: ${FRMS_FCM_TOPIC:ops-alerts}
+    sms:
+      enabled: ${FRMS_OPS_SMS_ENABLED:false}
+      provider-name: ${FRMS_SMS_PROVIDER_NAME:generic}
+      endpoint-url: ${FRMS_SMS_ENDPOINT_URL:}
+      auth-token: ${FRMS_SMS_AUTH_TOKEN:}
+      sender-id: ${FRMS_SMS_SENDER_ID:FRMS}
+      default-to: ${FRMS_SMS_DEFAULT_TO:}
 
 management:
   endpoints:

@@ -1,6 +1,6 @@
 /**
  * Operations hub domain types — aligned with:
- * - DB: database/mssql/operations_hub.sql (ops_notification, ops_email_outbox, ops_feedback_log)
+ * - DB: database/mssql/operations_hub.sql (ops_notification, ops_email_outbox, ops_sms_outbox, ops_feedback_log)
  * - API: server/frms-ops-api …/notification, …/outbox, …/feedback
  * - JSON field names match Java DTOs / Hibernate entities as serialized by Spring.
  */
@@ -26,6 +26,16 @@ export type EmailOutboxItem = {
   bodyPreview: string
   exchangeHouse?: string
   reportRef?: string
+  createdAt: string
+  status: 'queued' | 'sent_demo'
+}
+
+/** Maps to dbo.ops_sms_outbox + SmsOutboxRow */
+export type SmsOutboxItem = {
+  id: string
+  to: string
+  messagePreview: string
+  provider?: string
   createdAt: string
   status: 'queued' | 'sent_demo'
 }

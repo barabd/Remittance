@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx'
+import { apiUrl } from '../api/config'
 
 function escapeHtml(s: string) {
   return s
@@ -33,15 +34,52 @@ export function downloadBlob(filename: string, blob: Blob) {
   URL.revokeObjectURL(url)
 }
 
-export function exportRowsToExcel(rows: Record<string, unknown>[], sheetName: string, filename: string) {
+async function tryServerExport(
+  format: 'pdf' | 'xlsx' | 'csv',
+  title: string,
+  rows: Record<string, unknown>[],
+  filename: string,
+) {
+  if (import.meta.env.VITE_USE_LIVE_API !== 'true') return false
+  try {
+    const token = import.meta.env.VITE_API_BEARER_TOKEN
+    const headers: HeadersInit = {
+      Accept: 'application/octet-stream',
+      'Content-Type': 'application/json',
+    }
+    if (typeof token === 'string' && token.length > 0) {
+      headers.Authorization = `Bearer ${token}`
+    }
+    const res = await fetch(apiUrl('/exports/generate'), {
+      method: 'POST',
+      headers,
+      credentials: import.meta.env.VITE_API_FETCH_CREDENTIALS ?? 'omit',
+      body: JSON.stringify({ format, title, rows, fileName: filename }),
+    })
+    if (!res.ok) return false
+    const blob = await res.blob()
+    const contentDisposition = res.headers.get('content-disposition') || ''
+    const fromHeader = /filename="?([^";]+)"?/i.exec(contentDisposition)?.[1]
+    downloadBlob(fromHeader || filename, blob)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function exportRowsToExcel(rows: Record<string, unknown>[], sheetName: string, filename: string) {
+  const fn = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`
+  if (await tryServerExport('xlsx', sheetName, rows, fn)) return
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31) || 'Report')
-  XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`)
+  XLSX.writeFile(wb, fn)
 }
 
-export function exportRowsToCsv(rows: Record<string, unknown>[], filename: string) {
+export async function exportRowsToCsv(rows: Record<string, unknown>[], filename: string) {
   if (rows.length === 0) return
+  const fn = filename.endsWith('.csv') ? filename : `${filename}.csv`
+  if (await tryServerExport('csv', 'CSV Export', rows, fn)) return
   const keys = rowKeys(rows)
   const esc = (v: unknown) => {
     const s = String(v ?? '')
@@ -50,7 +88,7 @@ export function exportRowsToCsv(rows: Record<string, unknown>[], filename: strin
   }
   const lines = [keys.join(','), ...rows.map((row) => keys.map((k) => esc(row[k])).join(','))]
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  downloadBlob(filename.endsWith('.csv') ? filename : `${filename}.csv`, blob)
+  downloadBlob(fn, blob)
 }
 
 export function exportRowsToTxt(rows: Record<string, unknown>[], filename: string) {
@@ -73,8 +111,10 @@ export function exportRowsToWordHtml(title: string, rows: Record<string, unknown
   downloadBlob(filename.endsWith('.doc') ? filename : `${filename}.doc`, blob)
 }
 
-/** User prints and chooses “Save as PDF” in the system dialog */
-export function openPrintableReportWindow(title: string, rows: Record<string, unknown>[]) {
+/** Uses server-side PDF in live mode; falls back to browser print window if unavailable. */
+export async function openPrintableReportWindow(title: string, rows: Record<string, unknown>[]) {
+  const pdfFile = `${safeExportFilename(title)}.pdf`
+  if (await tryServerExport('pdf', title, rows, pdfFile)) return
   const keys = rowKeys(rows)
   const th = keys.map((k) => `<th style="text-align:left;border:1px solid #ccc;padding:6px">${escapeHtml(k)}</th>`).join('')
   const body = rows

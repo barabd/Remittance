@@ -493,9 +493,13 @@ export function RemittanceDisbursementPage() {
   }, [uploadFile])
 
   const canApprove = selectedRow?.status === 'Pending Approval'
-  const canHold = selectedRow?.status === 'Pending Approval'
+  const canHold =
+    selectedRow?.status === 'Pending Approval' || selectedRow?.status === 'On Hold'
   const canReject = selectedRow?.status === 'Pending Approval'
   const canMarkDisbursed = selectedRow?.status === 'Approved' || selectedRow?.status === 'Queued'
+
+  const holdNextStatus: DisbursementStatus =
+    selectedRow?.status === 'On Hold' ? 'Pending Approval' : 'On Hold'
 
   function isRecoverableLiveFailure(e: unknown, action: 'approve' | 'reject' | 'hold' | 'disburse') {
     if (!(e instanceof ApiHttpError)) return true
@@ -772,10 +776,10 @@ export function RemittanceDisbursementPage() {
             variant="outlined"
             startIcon={<PauseCircleOutlineOutlinedIcon />}
             disabled={!canHold}
-            onClick={() => void updateSelectedStatus('On Hold')}
+            onClick={() => void updateSelectedStatus(holdNextStatus)}
             sx={{ borderColor: 'divider' }}
           >
-            Hold
+            {selectedRow?.status === 'On Hold' ? 'Release hold' : 'Hold'}
           </Button>
           <Button
             variant="outlined"

@@ -7,27 +7,33 @@ import {
   liveCreateEmailOutbox,
   liveCreateFeedbackLog,
   liveCreateOpsNotification,
+  liveCreateSmsOutbox,
   liveListEmailOutbox,
   liveListFeedbackLog,
   liveListOpsNotifications,
+  liveListSmsOutbox,
   liveMarkAllOpsNotificationsRead,
   livePatchEmailOutbox,
   livePatchOpsNotification,
+  livePatchSmsOutbox,
 } from '../../api/live/operationsHubClient'
-import { postOpsPushDeliveryIfConfigured } from '../../lib/opsDeliveryClient'
+import { postOpsPushDeliveryIfConfigured, postOpsSmsDeliveryIfConfigured } from '../../lib/opsDeliveryClient'
 import { nextId, nowTs } from '../../lib/datetimeIds'
 import {
   EMAIL_OUTBOX_EVENT,
   FEEDBACK_LOG_EVENT,
   OPERATIONAL_NOTIFICATIONS_EVENT,
+  SMS_OUTBOX_EVENT,
 } from './constants'
 import {
   loadLocalEmailOutbox,
   loadLocalFeedbackLog,
   loadLocalNotifications,
+  loadLocalSmsOutbox,
   saveLocalEmailOutbox,
   saveLocalFeedbackLog,
   saveLocalNotifications,
+  saveLocalSmsOutbox,
 } from './localStore'
 import type {
   EmailOutboxItem,
@@ -35,6 +41,7 @@ import type {
   FeedbackSource,
   OperationalNotification,
   OperationalNotificationKind,
+  SmsOutboxItem,
 } from './types'
 
 function frmsLiveApiEnabled(): boolean {
@@ -76,6 +83,7 @@ export function pushOperationalNotification(input: {
   if (frmsLiveApiEnabled()) {
     return liveCreateOpsNotification(input).then((created) => {
       postOpsPushDeliveryIfConfigured(created)
+      postOpsSmsDeliveryIfConfigured(created)
       emit(OPERATIONAL_NOTIFICATIONS_EVENT)
     })
   }
@@ -87,6 +95,7 @@ export function pushOperationalNotification(input: {
   }
   saveLocalNotifications([row, ...loadLocalNotifications()])
   postOpsPushDeliveryIfConfigured(row)
+  postOpsSmsDeliveryIfConfigured(row)
   emit(OPERATIONAL_NOTIFICATIONS_EVENT)
   return Promise.resolve()
 }
@@ -177,6 +186,66 @@ export function resetOutboxItemToQueued(id: string): Promise<void> {
   return Promise.resolve()
 }
 
+// --- SMS outbox ---
+
+export function loadSmsOutbox(): SmsOutboxItem[] {
+  return loadLocalSmsOutbox()
+}
+
+export async function fetchSmsOutbox(): Promise<SmsOutboxItem[]> {
+  if (frmsLiveApiEnabled()) {
+    return liveListSmsOutbox()
+  }
+  return loadLocalSmsOutbox()
+}
+
+export function queueSmsToExchangeHouse(input: {
+  to: string
+  messagePreview: string
+  provider?: string
+}): Promise<void> {
+  if (frmsLiveApiEnabled()) {
+    return liveCreateSmsOutbox(input).then(() => {
+      emit(SMS_OUTBOX_EVENT)
+    })
+  }
+  const row: SmsOutboxItem = {
+    id: nextId('SMS'),
+    ...input,
+    createdAt: nowTs(),
+    status: 'queued',
+  }
+  saveLocalSmsOutbox([row, ...loadLocalSmsOutbox()])
+  emit(SMS_OUTBOX_EVENT)
+  return Promise.resolve()
+}
+
+export function markSmsOutboxItemSentDemo(id: string): Promise<void> {
+  if (frmsLiveApiEnabled()) {
+    return livePatchSmsOutbox(id, 'sent_demo').then(() => {
+      emit(SMS_OUTBOX_EVENT)
+    })
+  }
+  saveLocalSmsOutbox(
+    loadLocalSmsOutbox().map((e) => (e.id === id ? { ...e, status: 'sent_demo' as const } : e)),
+  )
+  emit(SMS_OUTBOX_EVENT)
+  return Promise.resolve()
+}
+
+export function resetSmsOutboxItemToQueued(id: string): Promise<void> {
+  if (frmsLiveApiEnabled()) {
+    return livePatchSmsOutbox(id, 'queued').then(() => {
+      emit(SMS_OUTBOX_EVENT)
+    })
+  }
+  saveLocalSmsOutbox(
+    loadLocalSmsOutbox().map((e) => (e.id === id ? { ...e, status: 'queued' as const } : e)),
+  )
+  emit(SMS_OUTBOX_EVENT)
+  return Promise.resolve()
+}
+
 // --- Feedback log (#15) ---
 
 export function loadFeedbackLog() {
@@ -214,12 +283,14 @@ export function appendFeedback(source: FeedbackSource, message: string, meta?: s
 export async function refreshOperationsHubSnapshot(): Promise<{
   notifications: OperationalNotification[]
   outbox: EmailOutboxItem[]
+  smsOutbox: SmsOutboxItem[]
   feedback: FeedbackLogEntry[]
 }> {
-  const [notifications, outbox, feedback] = await Promise.all([
+  const [notifications, outbox, smsOutbox, feedback] = await Promise.all([
     fetchOperationalNotifications(),
     fetchEmailOutbox(),
+    fetchSmsOutbox(),
     fetchFeedbackLog(),
   ])
-  return { notifications, outbox, feedback }
+  return { notifications, outbox, smsOutbox, feedback }
 }

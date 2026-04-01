@@ -16,10 +16,15 @@ public class OpsDeliveryController {
 
   private final OpsEmailDeliveryService emailDeliveryService;
   private final OpsPushDeliveryService pushDeliveryService;
+  private final OpsSmsDeliveryService smsDeliveryService;
 
-  public OpsDeliveryController(OpsEmailDeliveryService emailDeliveryService, OpsPushDeliveryService pushDeliveryService) {
+  public OpsDeliveryController(
+      OpsEmailDeliveryService emailDeliveryService,
+      OpsPushDeliveryService pushDeliveryService,
+      OpsSmsDeliveryService smsDeliveryService) {
     this.emailDeliveryService = emailDeliveryService;
     this.pushDeliveryService = pushDeliveryService;
+    this.smsDeliveryService = smsDeliveryService;
   }
 
   @PostMapping("/email")
@@ -41,6 +46,18 @@ public class OpsDeliveryController {
       return ResponseEntity.ok(pushDeliveryService.send(body));
     } catch (Exception e) {
       log.error("FCM delivery failed for id={}", body.id(), e);
+      String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+      return ResponseEntity.internalServerError().body(new OpsDeliveryDtos.DeliveryAcceptedResponse(false, msg));
+    }
+  }
+
+  @PostMapping("/sms")
+  public ResponseEntity<OpsDeliveryDtos.DeliveryAcceptedResponse> acceptSms(
+      @RequestBody OpsDeliveryDtos.SmsDeliveryRequest body) {
+    try {
+      return ResponseEntity.ok(smsDeliveryService.send(body));
+    } catch (Exception e) {
+      log.error("SMS delivery failed for id={}", body.id(), e);
       String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
       return ResponseEntity.internalServerError().body(new OpsDeliveryDtos.DeliveryAcceptedResponse(false, msg));
     }

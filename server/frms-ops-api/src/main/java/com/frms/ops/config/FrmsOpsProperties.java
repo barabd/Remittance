@@ -7,6 +7,7 @@ public class FrmsOpsProperties {
 
   private final Mail mail = new Mail();
   private final Fcm fcm = new Fcm();
+  private final Sms sms = new Sms();
 
   public Mail getMail() {
     return mail;
@@ -14,6 +15,10 @@ public class FrmsOpsProperties {
 
   public Fcm getFcm() {
     return fcm;
+  }
+
+  public Sms getSms() {
+    return sms;
   }
 
   public static class Mail {
@@ -133,6 +138,69 @@ public class FrmsOpsProperties {
 
     public void setTopic(String topic) {
       this.topic = topic;
+    }
+  }
+
+  public static class Sms {
+    /** When true and endpoint-url is set, SMS requests are forwarded to provider endpoint. */
+    private boolean enabled = false;
+    /** Friendly provider label for logs and API responses. */
+    private String providerName = "generic";
+    /** HTTP endpoint that accepts JSON payload from /operations/delivery/sms. */
+    private String endpointUrl = "";
+    /** Optional bearer token used as Authorization header when forwarding. */
+    private String authToken = "";
+    /** Optional sender id forwarded as part of payload. */
+    private String senderId = "";
+    /** Default recipient msisdn when request omits `to`. */
+    private String defaultTo = "";
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public String getProviderName() {
+      return providerName;
+    }
+
+    public void setProviderName(String providerName) {
+      this.providerName = providerName;
+    }
+
+    public String getEndpointUrl() {
+      return endpointUrl;
+    }
+
+    public void setEndpointUrl(String endpointUrl) {
+      this.endpointUrl = endpointUrl;
+    }
+
+    public String getAuthToken() {
+      return authToken;
+    }
+
+    public void setAuthToken(String authToken) {
+      this.authToken = authToken;
+    }
+
+    public String getSenderId() {
+      return senderId;
+    }
+
+    public void setSenderId(String senderId) {
+      this.senderId = senderId;
+    }
+
+    public String getDefaultTo() {
+      return defaultTo;
+    }
+
+    public void setDefaultTo(String defaultTo) {
+      this.defaultTo = defaultTo;
     }
   }
 }
