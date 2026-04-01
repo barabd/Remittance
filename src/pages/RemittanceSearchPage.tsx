@@ -342,17 +342,39 @@ function amlDtoToRow(d: {
   }
 }
 
+const LS_REMITTANCE_KEY = 'frms.remittance_search.v1'
+
 export function RemittanceSearchPage() {
+
   const liveApi = useLiveApi()
   const [searchParams] = useSearchParams()
 
-  const [rows, setRows] = useState<RemittanceRow[]>(() => [...seedRows])
+  const [rows, setRows] = useState<RemittanceRow[]>(() => {
+    if (import.meta.env.VITE_USE_LIVE_API === 'true') return [...seedRows]
+    const raw = localStorage.getItem(LS_REMITTANCE_KEY)
+    if (!raw) return [...seedRows]
+    try {
+      const p = JSON.parse(raw) as RemittanceRow[]
+      return Array.isArray(p) && p.length > 0 ? p : [...seedRows]
+    } catch {
+      return [...seedRows]
+    }
+  })
+
+  // Persist to local storage in mock mode
+  useEffect(() => {
+    if (import.meta.env.VITE_USE_LIVE_API !== 'true') {
+      localStorage.setItem(LS_REMITTANCE_KEY, JSON.stringify(rows))
+    }
+  }, [rows])
+
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [liveError, setLiveError] = useState<string | null>(null)
   const selectedRow = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
     [rows, selectedId],
   )
+
 
   const [filters, setFilters] = useState({
     query: '',
@@ -1197,12 +1219,29 @@ export function RemittanceSearchPage() {
       { field: 'createdAt', headerName: 'Created', flex: 1, minWidth: 160 },
       { field: 'corridor', headerName: 'Corridor', flex: 1, minWidth: 120 },
       { field: 'channel', headerName: 'Channel', flex: 0.7, minWidth: 100 },
-      { field: 'amount', headerName: 'Amount', flex: 1, minWidth: 130 },
+      {
+        field: 'amount',
+        headerName: 'Amount',
+        flex: 1,
+        minWidth: 130,
+        align: 'right',
+        headerAlign: 'right',
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', width: '100%', fontWeight: 500 }}
+          >
+            {params.value}
+          </Typography>
+        ),
+      },
       {
         field: 'incentiveBdt',
         headerName: 'Incentive (৳)',
         flex: 0.75,
         minWidth: 120,
+        align: 'right',
+        headerAlign: 'right',
         renderCell: (params) => {
           const row = params.row
           const { num, ccy } = parseAmountDisplay(row.amount)
@@ -1210,7 +1249,18 @@ export function RemittanceSearchPage() {
             row.incentiveBdt ?? computeRemittanceIncentive(num, ccy, row.exchangeHouse).incentiveBdt
           const tip = row.incentiveRule ?? computeRemittanceIncentive(num, ccy, row.exchangeHouse).rule
           return (
-            <Typography variant="body2" title={tip}>
+            <Typography
+              variant="body2"
+              title={tip}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                height: '100%',
+                width: '100%',
+                fontWeight: 500,
+              }}
+            >
               {v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Typography>
           )
@@ -1223,8 +1273,13 @@ export function RemittanceSearchPage() {
         flex: 1.1,
         minWidth: 160,
         renderCell: (params) => (
-          <Stack direction="row" alignItems="center" gap={0.75} sx={{ py: 0.5 }}>
-            <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            gap={0.75}
+            sx={{ height: '100%', py: 0.5 }}
+          >
+            <Typography variant="body2" noWrap sx={{ maxWidth: 200, fontWeight: 500 }}>
               {params.value}
             </Typography>
             {isActiveBeneficiary(String(params.value), benNames) ? (
@@ -1242,7 +1297,14 @@ export function RemittanceSearchPage() {
         headerName: 'Photo ID',
         flex: 0.65,
         minWidth: 100,
-        valueGetter: (_v, row) => row.photoIdRef || '—',
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={{ height: '100%', display: 'flex', alignItems: 'center' }}
+          >
+            {params.row.photoIdRef || '—'}
+          </Typography>
+        ),
       },
       { field: 'maker', headerName: 'Maker', flex: 0.8, minWidth: 120 },
       {
@@ -1251,16 +1313,19 @@ export function RemittanceSearchPage() {
         flex: 0.9,
         minWidth: 140,
         renderCell: (params) => (
-          <Chip
-            size="small"
-            label={params.value}
-            sx={{
-              bgcolor: statusChip(params.value).bg,
-              color: statusChip(params.value).fg,
-            }}
-          />
+          <Box sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
+            <Chip
+              size="small"
+              label={params.value}
+              sx={{
+                bgcolor: statusChip(params.value).bg,
+                color: statusChip(params.value).fg,
+              }}
+            />
+          </Box>
         ),
       },
+
     ],
     [benNames],
   )

@@ -120,7 +120,19 @@ function seedCoverFunds(): CoverFundRecord[] {
       checker: 'System',
       updatedAt: '2026-03-24 18:00',
     },
+    {
+      id: 'CF-004',
+      fundCode: 'SAR-VOSTRO-EH02',
+      partnerName: 'EH-Saudi-Partner',
+      currency: 'SAR',
+      balanceAmount: 850_000,
+      status: 'Active',
+      maker: 'System',
+      checker: 'System',
+      updatedAt: '2026-03-25 09:00',
+    },
   ]
+
 }
 
 export function loadBeneficiaries(): BeneficiaryRecord[] {
@@ -160,8 +172,11 @@ export function loadCoverFunds(): CoverFundRecord[] {
   }
   // Ensure BDT cover fund exists (migration for existing data)
   const hasBdt = rows.some((r) => r.currency === 'BDT')
+  let currentRows = [...rows]
+  let changed = false
+
   if (!hasBdt) {
-    const bdtFund: CoverFundRecord = {
+    currentRows.push({
       id: 'CF-003',
       fundCode: 'BDT-NOSTRO-UB',
       partnerName: 'Uttara Bank Bangladesh',
@@ -171,13 +186,33 @@ export function loadCoverFunds(): CoverFundRecord[] {
       maker: 'System',
       checker: 'System',
       updatedAt: '2026-03-24 18:00',
-    }
-    const updated = [bdtFund, ...rows]
-    writeLs(LS_KEYS.coverFunds, updated, 'coverFunds')
-    return updated
+    })
+    changed = true
   }
-  return rows
+
+  // Ensure SAR cover fund exists (for new SAR remittance approval tests)
+  const hasSar = currentRows.some((r) => r.currency === 'SAR' && r.status === 'Active')
+  if (!hasSar) {
+    currentRows.push({
+      id: 'CF-004',
+      fundCode: 'SAR-VOSTRO-EH02',
+      partnerName: 'EH-Saudi-Partner',
+      currency: 'SAR',
+      balanceAmount: 850_000,
+      status: 'Active',
+      maker: 'System',
+      checker: 'System',
+      updatedAt: '2026-03-25 09:00',
+    })
+    changed = true
+  }
+
+  if (changed) {
+    writeLs(LS_KEYS.coverFunds, currentRows, 'coverFunds')
+  }
+  return currentRows
 }
+
 
 export function saveCoverFunds(rows: CoverFundRecord[]) {
   writeLs(LS_KEYS.coverFunds, rows, 'coverFunds')
