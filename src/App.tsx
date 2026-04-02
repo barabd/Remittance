@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { useState } from 'react'
 import { AdminLayout } from './layout/AdminLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -28,6 +29,7 @@ import { SecurityUtilitiesPage } from './pages/tools/SecurityUtilitiesPage'
 import { SecurityVaptPage } from './pages/tools/SecurityVaptPage'
 import { RiskControlPage } from './pages/compliance/RiskControlPage'
 import { AmlComplianceSettingsPage } from './pages/compliance/AmlComplianceSettingsPage'
+import { BfiuReportingPage } from './pages/compliance/BfiuReportingPage'
 import { InvestigationCasesPage } from './pages/operations/InvestigationCasesPage'
 import { RemittanceSingleEntryPage } from './pages/exchange-house/RemittanceSingleEntryPage'
 import { BlockRemittanceReportsPage } from './pages/exchange-house/BlockRemittanceReportsPage'
@@ -38,8 +40,17 @@ import { HeadOfficePermissionsPage } from './pages/head-office/HeadOfficePermiss
 import { UserRightsModulePage } from './pages/security/UserRightsModulePage'
 import { BulkDataHubPage } from './pages/operations/BulkDataHubPage'
 import { ReportsPage } from './pages/finance/ReportsPage'
+import { CustomerManagementPage } from './pages/masters/CustomerManagementPage'
+import { LoginPage } from './pages/security/LoginPage'
+import { UserRoleManagementPage } from './pages/security/UserRoleManagementPage'
 
 export default function App() {
+  const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'))
+
+  if (!token) {
+    return <LoginPage onLogin={setToken} />
+  }
+
   return (
     <Routes>
       <Route element={<AdminLayout />}>
@@ -59,6 +70,8 @@ export default function App() {
         <Route path="/compliance/risk-controls" element={<RiskControlPage />} />
         <Route path="/compliance/mla-settings" element={<AmlComplianceSettingsPage />} />
         <Route path="/compliance/rules" element={<RulesReferencePage />} />
+        <Route path="/compliance/bfiu-reporting" element={<BfiuReportingPage />} />
+
         <Route
           path="/reconciliation/exceptions"
           element={<ReconExceptionsPage />}
@@ -73,6 +86,7 @@ export default function App() {
           element={<BeneficiaryManagementPage />}
         />
         <Route path="/masters/agents" element={<AgentManagementPage />} />
+        <Route path="/masters/customers" element={<CustomerManagementPage />} />
 
         <Route
           path="/remittance/search"
@@ -105,7 +119,6 @@ export default function App() {
           element={<IncentiveDistributionDemoPage />}
         />
         <Route path="/finance/reports" element={<ReportsPage />} />
-        <Route path="/reports" element={<Navigate to="/finance/reports" replace />} />
         <Route path="/tools/fx-converter" element={<FxConverterPage />} />
         <Route path="/tools/corporate-file-mapping" element={<CorporateFileMappingPage />} />
         <Route path="/tools/security-utilities" element={<SecurityUtilitiesPage />} />
@@ -117,6 +130,7 @@ export default function App() {
         <Route path="/head-office/module" element={<HeadOfficeModulePage />} />
         <Route path="/head-office/permissions" element={<HeadOfficePermissionsPage />} />
         <Route path="/security/user-rights" element={<UserRightsModulePage />} />
+        <Route path="/security/roles" element={<UserRoleManagementPage />} />
         <Route path="/audit" element={<AuditMonitoringPage />} />
 
         <Route path="/profile/company" element={<CompanyInfoPage />} />

@@ -232,10 +232,20 @@ export function InvestigationCasesPage() {
           size="small"
           label={p.value}
           sx={{
-            bgcolor: p.value === 'Closed' ? 'rgba(211, 47, 47, 0.14)' : 'rgba(0,0,0,0.06)',
-            color: p.value === 'Closed' ? '#d32f2f' : brand.black,
+            bgcolor:
+              p.value === 'Closed'
+                ? 'rgba(211, 47, 47, 0.14)'
+                : p.value === 'Investigating'
+                  ? 'rgba(237, 108, 2, 0.12)'
+                  : 'rgba(66, 171, 72, 0.12)',
+            color:
+              p.value === 'Closed'
+                ? '#d32f2f'
+                : p.value === 'Investigating'
+                  ? '#ed6c02'
+                  : brand.green,
+            fontWeight: 700,
           }}
-
         />
       ),
     },
@@ -438,11 +448,20 @@ export function InvestigationCasesPage() {
                   size="small"
                   label={selected.status}
                   sx={{
-                    bgcolor: selected.status === 'Closed' ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0,0,0,0.05)',
-                    color: selected.status === 'Closed' ? '#d32f2f' : brand.black,
+                    bgcolor:
+                      selected.status === 'Closed'
+                        ? 'rgba(211, 47, 47, 0.14)'
+                        : selected.status === 'Investigating'
+                          ? 'rgba(237, 108, 2, 0.12)'
+                          : 'rgba(66, 171, 72, 0.12)',
+                    color:
+                      selected.status === 'Closed'
+                        ? '#d32f2f'
+                        : selected.status === 'Investigating'
+                          ? '#ed6c02'
+                          : brand.green,
                     fontWeight: 700,
                   }}
-
                 />
               </Stack>
               <Typography variant="body2" sx={{ color: brand.gray600, mb: 1.5 }}>

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLiveApi } from '../api/config'
 import { brand } from '../theme/appTheme'
 import { publishOpsMetrics } from '../state/opsMetricsStore'
+import { appendBfiuReport } from '../state/bfiuReportingStore'
 import {
   approveQueueItem,
   DEFAULT_QUEUE_CHECKER_USER,
@@ -170,6 +171,18 @@ export function RemittanceQueuePage() {
     }
   }
 
+  function reportStr() {
+    if (!selected) return
+    const amt = parseFloat(selected.amount.replace(/[^0-9.]/g, ''))
+    appendBfiuReport({
+      remittanceNo: selected.remittanceNo,
+      reportType: 'STR',
+      amountBdt: amt,
+      reason: 'Manual STR report from approvals queue by checker.',
+    })
+    setSnack({ open: true, severity: 'warning', message: `Transaction ${selected.remittanceNo} reported to BFIU as STR.` })
+  }
+
   return (
     <Stack spacing={2.5}>
       {live ? (
@@ -226,6 +239,15 @@ export function RemittanceQueuePage() {
               onClick={() => void reject()}
             >
               Reject
+            </Button>
+            <Button
+              variant="text"
+              color="error"
+              disabled={!selected || actionBusy}
+              onClick={reportStr}
+              sx={{ fontWeight: 700 }}
+            >
+              Report STR
             </Button>
           </Stack>
         </Stack>

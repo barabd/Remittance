@@ -28,6 +28,8 @@ export type AgentRecord = {
   type: 'Exchange House' | 'Correspondent' | 'Branch Agent'
   country: string
   contactPhone: string
+  walletBalance: number
+  commissionRate: number
   status: MasterApprovalStatus
   maker: string
   checker?: string

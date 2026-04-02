@@ -104,6 +104,11 @@ export const navGroups: NavGroup[] = [
         icon: <StorefrontOutlinedIcon fontSize="small" />,
       },
       {
+        label: 'Customers',
+        to: '/masters/customers',
+        icon: <PeopleOutlineOutlinedIcon fontSize="small" />,
+      },
+      {
         label: 'Single entry (abroad)',
         to: '/exchange-house/single-entry',
         icon: <PostAddOutlinedIcon fontSize="small" />,
@@ -142,6 +147,11 @@ export const navGroups: NavGroup[] = [
         label: 'Rules reference',
         to: '/compliance/rules',
         icon: <MenuBookOutlinedIcon fontSize="small" />,
+      },
+      {
+        label: 'BFIU Reporting (STR/CTR)',
+        to: '/compliance/bfiu-reporting',
+        icon: <AssessmentOutlinedIcon fontSize="small" />,
       },
     ],
   },
@@ -230,9 +240,14 @@ export const navGroups: NavGroup[] = [
         icon: <VpnKeyOutlinedIcon fontSize="small" />,
       },
       {
-        label: 'User rights / Security',
-        to: '/security/user-rights',
+        label: 'User & Role Management',
+        to: '/security/roles',
         icon: <ShieldOutlinedIcon fontSize="small" />,
+      },
+      {
+        label: 'Security audit / Rights',
+        to: '/security/user-rights',
+        icon: <SecurityOutlinedIcon fontSize="small" />,
       },
     ],
   },

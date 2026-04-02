@@ -62,6 +62,8 @@ export function AgentManagementPage() {
     country: '',
     contactPhone: '',
     notes: '',
+    walletBalance: 0,
+    commissionRate: 0,
   })
 
   const [auditOpen, setAuditOpen] = useState(false)
@@ -80,6 +82,8 @@ export function AgentManagementPage() {
       country: 'BD',
       contactPhone: '',
       notes: '',
+      walletBalance: 0,
+      commissionRate: 0,
     })
     setDialogOpen(true)
   }
@@ -94,6 +98,8 @@ export function AgentManagementPage() {
       country: selected.country,
       contactPhone: selected.contactPhone,
       notes: selected.notes ?? '',
+      walletBalance: selected.walletBalance,
+      commissionRate: selected.commissionRate,
     })
     setDialogOpen(true)
   }
@@ -110,6 +116,8 @@ export function AgentManagementPage() {
         country: form.country.trim().toUpperCase().slice(0, 2) || 'BD',
         contactPhone: form.contactPhone.trim(),
         notes: form.notes.trim() || undefined,
+        walletBalance: form.walletBalance,
+        commissionRate: form.commissionRate,
       })
     }
     setDialogOpen(false)
@@ -200,6 +208,8 @@ export function AgentManagementPage() {
     { field: 'type', headerName: 'Type', flex: 0.9, minWidth: 130 },
     { field: 'country', headerName: 'Country', flex: 0.4, minWidth: 80 },
     { field: 'contactPhone', headerName: 'Contact', flex: 0.9, minWidth: 130 },
+    { field: 'walletBalance', headerName: 'Balance (৳)', type: 'number', flex: 0.8, minWidth: 120 },
+    { field: 'commissionRate', headerName: 'Comm (%)', type: 'number', flex: 0.6, minWidth: 90 },
     { field: 'maker', headerName: 'Maker', flex: 0.6, minWidth: 100 },
     {
       field: 'status',
@@ -370,6 +380,20 @@ export function AgentManagementPage() {
               fullWidth
               multiline
               minRows={2}
+            />
+            <TextField
+              label="Wallet balance (BDT)"
+              type="number"
+              value={form.walletBalance}
+              onChange={(e) => setForm((s) => ({ ...s, walletBalance: Number(e.target.value) || 0 }))}
+              fullWidth
+            />
+            <TextField
+              label="Commission rate (%)"
+              type="number"
+              value={form.commissionRate}
+              onChange={(e) => setForm((s) => ({ ...s, commissionRate: Number(e.target.value) || 0 }))}
+              fullWidth
             />
             {!form.code.trim() || !form.name.trim() ? (
               <Alert severity="warning">Code and name are required.</Alert>

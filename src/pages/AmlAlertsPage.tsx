@@ -179,16 +179,23 @@ export function AmlAlertsPage() {
       headerName: 'Status',
       flex: 0.8,
       minWidth: 120,
-      renderCell: (params) => (
-        <Chip
-          size="small"
-          label={params.value}
-          sx={{
-            bgcolor: params.value === 'Investigating' ? 'rgba(66,171,72,0.12)' : 'rgba(0,0,0,0.06)',
-            color: params.value === 'Investigating' ? brand.green : brand.black,
-          }}
-        />
-      ),
+      renderCell: (params) => {
+        const val = params.value as AmlAlertRow['status']
+        const colors: Record<string, { bg: string; fg: string }> = {
+          Investigating: { bg: 'rgba(237, 108, 2, 0.12)', fg: '#ed6c02' },
+          Resolved: { bg: 'rgba(66, 171, 72, 0.12)', fg: brand.green },
+          'False Positive': { bg: 'rgba(0,0,0,0.06)', fg: 'text.secondary' },
+          Open: { bg: 'rgba(66, 171, 72, 0.12)', fg: brand.green },
+        }
+        const c = colors[val] || { bg: 'rgba(0,0,0,0.06)', fg: brand.black }
+        return (
+          <Chip
+            size="small"
+            label={val}
+            sx={{ bgcolor: c.bg, color: c.fg, fontWeight: 700 }}
+          />
+        )
+      },
     },
   ]
 
@@ -238,35 +245,49 @@ export function AmlAlertsPage() {
               setStatusFilter(e.target.value as 'All' | AmlAlertRow['status'])
             }
           >
-            <MenuItem value="All">All</MenuItem>
-            <MenuItem value="Open">Open</MenuItem>
-            <MenuItem value="Investigating">Investigating</MenuItem>
+            <MenuItem value="All">All Statuses</MenuItem>
+            <MenuItem value="Open">Open Alerts</MenuItem>
+            <MenuItem value="Investigating">Investigation in Progress</MenuItem>
+            <MenuItem value="Resolved">Resolved / Closed</MenuItem>
+            <MenuItem value="False Positive">False Positives</MenuItem>
           </TextField>
-          <Stack direction="row" gap={1}>
+          <Stack direction="row" gap={1} flexWrap="wrap" justifyContent="flex-end">
             <Button
               variant="outlined"
+              size="small"
               onClick={() => void onSetStatus('Investigating')}
               disabled={productionActionsDisabled || !selected || selected.status === 'Investigating'}
             >
-              Mark investigating
+              Investigate
             </Button>
             <Button
               variant="outlined"
-              onClick={() => void onSetStatus('Open')}
-              disabled={productionActionsDisabled || !selected || selected.status === 'Open'}
+              size="small"
+              color="success"
+              onClick={() => void onSetStatus('Resolved')}
+              disabled={productionActionsDisabled || !selected || selected.status === 'Resolved'}
             >
-              Reopen
+              Resolve
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              color="error"
+              onClick={() => void onSetStatus('False Positive')}
+              disabled={productionActionsDisabled || !selected || selected.status === 'False Positive'}
+            >
+              False Positive
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<VisibilityOutlinedIcon />}
+              disabled={productionActionsDisabled || !selected || selected.match !== 'Possible' || creatingCase}
+              onClick={() => void onCreateCase()}
+            >
+              {creatingCase ? 'Escalate to Case…' : 'Create Case'}
             </Button>
           </Stack>
-          <Button
-            variant="contained"
-            startIcon={<VisibilityOutlinedIcon />}
-            sx={{ alignSelf: 'flex-end' }}
-            disabled={productionActionsDisabled || !selected || selected.match !== 'Possible' || creatingCase}
-            onClick={() => void onCreateCase()}
-          >
-            {creatingCase ? 'Creating case…' : 'Create case'}
-          </Button>
         </Stack>
       </Stack>
 
@@ -294,9 +315,8 @@ export function AmlAlertsPage() {
             disableRowSelectionOnClick
             getRowId={(r) => r.id}
             rowSelectionModel={{ type: 'include', ids: new Set(selectedId ? [selectedId] : []) }}
-            onRowClick={(p) => setSelectedId(String(p.row.id))}
-            onRowSelectionModelChange={(model) => {
-              const next = (model as any).ids?.values().next().value
+            onRowSelectionModelChange={(model: any) => {
+              const next = model.ids?.values().next().value
               setSelectedId(next ? String(next) : null)
             }}
             initialState={{

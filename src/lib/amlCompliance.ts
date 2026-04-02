@@ -96,6 +96,10 @@ const PRIMARY_KEYWORD_RULES: { test: (blob: string) => boolean; hit: ScreeningHi
     hit: { list: 'OFAC', score: 94, subjectHint: 'Jurisdiction / keyword (sanctions programme)' },
   },
   {
+    test: (b) => /un\s*sanctions|united\s*nations\s*watchlist|unsc\s*hit/i.test(b),
+    hit: { list: 'UN', score: 95, subjectHint: 'UN Sanctions keyword match' },
+  },
+  {
     test: (b) => /al[\s-]*qaeda|osama\s*bin/i.test(b),
     hit: { list: 'OFAC', score: 96, subjectHint: 'Sanctions keyword match' },
   },
@@ -267,8 +271,15 @@ export function assertPhotoIdOk(
   if (!t || !r) {
     return {
       ok: false,
-      message: 'Valid photo ID is required: provide ID type and ID number / reference before proceeding.',
+      message: 'Valid photo ID is required: provide ID type (NID, Passport, etc.) and reference number before proceeding.',
     }
+  }
+  const typeLower = t.toLowerCase()
+  if (typeLower.includes('nid') && !/^\d{10,17}$/.test(r.replace(/\s/g, ''))) {
+    return { ok: false, message: 'Invalid NID format. Bangladesh NID must be 10, 13, or 17 digits.' }
+  }
+  if (typeLower.includes('passport') && !/^[A-Z][0-9]{8}$/i.test(r.replace(/\s/g, ''))) {
+    return { ok: false, message: 'Invalid Passport format. Must be 1 letter followed by 8 digits.' }
   }
   if (r.length < 4) {
     return { ok: false, message: 'Photo ID reference appears invalid (minimum 4 characters).' }
