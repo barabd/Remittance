@@ -32,6 +32,7 @@ export const REPORT_KEYS = [
   'Branch Sub-Branch Code Information',
   'Account Pay Remittance (Exchange House)',
   'User Activity Log',
+  'Profit Report',
   'Custom Report Request',
 ] as const
 
@@ -223,6 +224,14 @@ export function buildReportDataset(reportName: ReportKey, periodFrom: string, pe
           payType: 'Account pay',
           status: 'Pending Approval',
         },
+      ]
+
+    case 'Profit Report':
+      return [
+        glLine({ category: 'Gross Revenue', item: 'Remittance Fees', amount: 850000, margin: '15%' }),
+        glLine({ category: 'Gross Revenue', item: 'FX Spread', amount: 320000, margin: '22%' }),
+        glLine({ category: 'Direct Expense', item: 'Agent Commission', amount: -450000, margin: '—' }),
+        glLine({ category: 'Net Profit', item: 'Monthly Total', amount: 720000, margin: '—' }),
       ]
 
     case 'Custom Report Request':

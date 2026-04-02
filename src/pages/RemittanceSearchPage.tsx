@@ -1,5 +1,6 @@
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -74,6 +75,11 @@ import {
   REMITTANCE_AUDIT_EVENT,
 } from '../state/remittanceAuditTrailStore'
 import {
+  loadQueueRows,
+  saveQueueRows,
+  type RemittanceQueueRow,
+} from '../state/remittanceQueueStore'
+import {
   analyzeStructuringPatterns,
   assertPhotoIdOk,
   evaluateRemitterDailyLimits,
@@ -109,6 +115,7 @@ type RemittanceRow = {
   /** MLA / KYC — required when enabled under Compliance → MLA settings */
   photoIdType?: string
   photoIdRef?: string
+  photoImage?: string
   /** Set on Excel import (#30); otherwise derived in grid from amount. */
   incentiveBdt?: number
   incentiveRule?: string
@@ -294,6 +301,38 @@ function parseExcelRows(file: File, profile: FileMappingProfile | undefined): Pr
   })
 }
 
+/** Sync queue when status changes: add/update items to show approval history */
+function syncQueueWithStatusChange(row: RemittanceRow, newStatus: RemittanceStatus) {
+  const queueRows = loadQueueRows()
+  const existingIndex = queueRows.findIndex((q) => q.remittanceNo === row.remittanceNo)
+  
+  // Only sync statuses relevant to approval queue
+  if (newStatus === 'Pending Approval' || newStatus === 'On Hold' || newStatus === 'Approved' || newStatus === 'Rejected') {
+    // Add or update in queue
+    const queueItem: RemittanceQueueRow = {
+      id: row.id,
+      remittanceNo: row.remittanceNo,
+      createdAt: row.createdAt,
+      corridor: row.corridor,
+      amount: row.amount,
+      maker: row.maker,
+      payType: row.channel === 'Cash' ? 'Cash' : 'Account pay',
+      exchangeHouse: row.exchangeHouse,
+      status: newStatus as 'Pending Approval' | 'On Hold' | 'Approved' | 'Rejected',
+    }
+    
+    if (existingIndex >= 0) {
+      // Update existing entry in queue
+      const updated = [...queueRows]
+      updated[existingIndex] = queueItem
+      saveQueueRows(updated)
+    } else {
+      // Add new entry to queue
+      saveQueueRows([queueItem, ...queueRows])
+    }
+  }
+}
+
 function remittanceDtoToRow(d: RemittanceDto, prev: RemittanceRow): RemittanceRow {
   const exchangeHouse = String(d.exchangeHouse ?? prev.exchangeHouse ?? '').trim() || 'LIVE-API'
   const amount = String(d.amount ?? prev.amount)
@@ -343,6 +382,7 @@ function amlDtoToRow(d: {
 }
 
 const LS_REMITTANCE_KEY = 'frms.remittance_search.v1'
+const REMITTANCE_ADDED_EVENT = 'remittance:added'
 
 export function RemittanceSearchPage() {
 
@@ -352,7 +392,11 @@ export function RemittanceSearchPage() {
   const [rows, setRows] = useState<RemittanceRow[]>(() => {
     if (import.meta.env.VITE_USE_LIVE_API === 'true') return [...seedRows]
     const raw = localStorage.getItem(LS_REMITTANCE_KEY)
-    if (!raw) return [...seedRows]
+    if (!raw) {
+      // Initialize with seedRows and save to localStorage
+      localStorage.setItem(LS_REMITTANCE_KEY, JSON.stringify(seedRows))
+      return [...seedRows]
+    }
     try {
       const p = JSON.parse(raw) as RemittanceRow[]
       return Array.isArray(p) && p.length > 0 ? p : [...seedRows]
@@ -367,6 +411,40 @@ export function RemittanceSearchPage() {
       localStorage.setItem(LS_REMITTANCE_KEY, JSON.stringify(rows))
     }
   }, [rows])
+
+  // Re-read from localStorage when page gains focus (e.g., after navigating back from Single Entry)
+  useEffect(() => {
+    if (import.meta.env.VITE_USE_LIVE_API === 'true') return
+    function refreshFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem(LS_REMITTANCE_KEY)
+        if (!raw) return
+        const stored = JSON.parse(raw) as RemittanceRow[]
+        if (!Array.isArray(stored) || stored.length === 0) return
+        setRows((prev) => {
+          // Only update if data has actually changed (different count or different first entry)
+          if (prev.length !== stored.length || (prev[0]?.id !== stored[0]?.id)) {
+            console.log('Refreshed rows from localStorage:', stored.length, 'entries')
+            return stored
+          }
+          return prev
+        })
+      } catch { /* ignore parse errors */ }
+    }
+    function onVisibility() {
+      if (document.visibilityState === 'visible') refreshFromLocalStorage()
+    }
+    // Refresh on window focus (covers tab switching and navigation return)
+    window.addEventListener('focus', refreshFromLocalStorage)
+    // Also refresh on visibility change (covers mobile and minimized tabs)
+    document.addEventListener('visibilitychange', onVisibility)
+    // Initial check on mount — catches data added while page was unmounted
+    refreshFromLocalStorage()
+    return () => {
+      window.removeEventListener('focus', refreshFromLocalStorage)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [liveError, setLiveError] = useState<string | null>(null)
@@ -416,6 +494,34 @@ export function RemittanceSearchPage() {
     const sync = () => setMappingProfiles(loadMappingProfiles())
     window.addEventListener(FILE_MAPPING_EVENT, sync as EventListener)
     return () => window.removeEventListener(FILE_MAPPING_EVENT, sync as EventListener)
+  }, [])
+
+  // Listen for new entries from Single Entry page
+  useEffect(() => {
+    const handleNewEntry = (event: Event) => {
+      const customEvent = event as CustomEvent<RemittanceRow>
+      console.log('Received new entry event:', customEvent.detail)
+      
+      const raw = localStorage.getItem(LS_REMITTANCE_KEY)
+      if (!raw) {
+        console.warn('localStorage is empty after entry added')
+        return
+      }
+      try {
+        const updated = JSON.parse(raw) as RemittanceRow[]
+        console.log('Updating rows with', updated.length, 'entries')
+        setRows(updated)
+        setSnack({
+          open: true,
+          severity: 'success',
+          message: `New entry ${customEvent.detail?.remittanceNo || ''} added from Single Entry page!`,
+        })
+      } catch (e) {
+        console.error('Failed to parse localStorage:', e)
+      }
+    }
+    window.addEventListener(REMITTANCE_ADDED_EVENT, handleNewEntry as EventListener)
+    return () => window.removeEventListener(REMITTANCE_ADDED_EVENT, handleNewEntry as EventListener)
   }, [])
 
   useEffect(() => {
@@ -709,6 +815,26 @@ export function RemittanceSearchPage() {
       const newlyAdded = imported.filter((r) => !existingIds.has(r.id))
       const merged = [...newlyAdded, ...rows]
       setRows(merged)
+      
+      // Sync pending/on-hold items to approval queue
+      const queueRows = loadQueueRows()
+      const queueItems: RemittanceQueueRow[] = newlyAdded
+        .filter((r) => r.status === 'Pending Approval' || r.status === 'On Hold')
+        .map((r) => ({
+          id: r.id,
+          remittanceNo: r.remittanceNo,
+          createdAt: r.createdAt,
+          corridor: r.corridor,
+          amount: r.amount,
+          maker: r.maker,
+          payType: r.channel === 'Cash' ? 'Cash' : 'Account pay',
+          exchangeHouse: r.exchangeHouse,
+          status: r.status === 'On Hold' ? 'On Hold' : 'Pending Approval',
+        }))
+      if (queueItems.length > 0) {
+        saveQueueRows([...queueItems, ...queueRows])
+      }
+      
       const profile = getMappingProfile(excelProfileId)
       const profileLabel = profile?.name ?? excelProfileId
       for (const r of newlyAdded) {
@@ -779,6 +905,8 @@ export function RemittanceSearchPage() {
       setRows((prev) =>
         prev.map((r) => (r.id === row.id ? { ...r, status, checker } : r)),
       )
+      // Sync with approval queue
+      syncQueueWithStatusChange(row, status)
     }
     setActing(true)
 
@@ -1590,6 +1718,16 @@ export function RemittanceSearchPage() {
               size="small"
             />
           </Stack>
+          {selectedRow.photoImage ? (
+            <Box sx={{ mt: 2 }}>
+              <Typography sx={{ fontWeight: 700, mb: 1, fontSize: '0.9rem' }}>Photo ID Image</Typography>
+              <Avatar
+                src={selectedRow.photoImage}
+                variant="rounded"
+                sx={{ width: 120, height: 120, border: '2px solid', borderColor: 'success.main' }}
+              />
+            </Box>
+          ) : null}
         </Paper>
       ) : null}
 

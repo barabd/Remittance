@@ -9,5 +9,6 @@ export {
   loadQueueRows,
   REMITTANCE_QUEUE_EVENT,
   rejectQueueItem,
+  saveQueueRows,
   syncRemittanceQueueFromLive,
 } from '../integrations/remittanceQueue/remittanceQueueRepository'

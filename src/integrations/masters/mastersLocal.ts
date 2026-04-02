@@ -67,6 +67,8 @@ function seedAgents(): AgentRecord[] {
       country: 'AE',
       contactPhone: '+971 4 *** ****',
       status: 'Active',
+      walletBalance: 1540000,
+      commissionRate: 1.25,
       maker: 'System',
       checker: 'System',
       createdAt: '2026-03-01 10:00',
@@ -79,6 +81,8 @@ function seedAgents(): AgentRecord[] {
       country: 'SA',
       contactPhone: '+966 11 *** ****',
       status: 'Pending Approval',
+      walletBalance: 0,
+      commissionRate: 0.8,
       maker: 'HO-Maker',
       createdAt: '2026-03-25 09:10',
     },
@@ -266,6 +270,8 @@ export function addAgent(input: Omit<AgentRecord, 'id' | 'status' | 'maker' | 'c
   const row: AgentRecord = {
     ...input,
     id: nextId('AGT'),
+    walletBalance: 0,
+    commissionRate: 0,
     status: 'Pending Approval',
     maker: DEFAULT_MAKER,
     createdAt: nowTs(),
@@ -287,6 +293,11 @@ export function previewUpdateAgent(id: string, patch: Partial<AgentRecord>): Age
       patch.contactPhone !== undefined ||
       patch.type !== undefined)
   ) {
+    nextRow.status = 'Pending Approval'
+    nextRow.checker = undefined
+    nextRow.maker = DEFAULT_MAKER
+  }
+  if (patch.walletBalance !== undefined || patch.commissionRate !== undefined) {
     nextRow.status = 'Pending Approval'
     nextRow.checker = undefined
     nextRow.maker = DEFAULT_MAKER

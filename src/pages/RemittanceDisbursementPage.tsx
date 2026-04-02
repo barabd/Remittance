@@ -11,6 +11,7 @@ import {
   Drawer,
   IconButton,
   Paper,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -312,6 +313,11 @@ export function RemittanceDisbursementPage() {
   const [auditLoading, setAuditLoading] = useState(false)
   const [auditFetchKey, setAuditFetchKey] = useState(0)
   const [benNames, setBenNames] = useState(() => activeBeneficiaryNameSet())
+  const [snack, setSnack] = useState<{
+    open: boolean
+    message: string
+    severity: 'success' | 'info' | 'warning' | 'error'
+  }>({ open: false, message: '', severity: 'info' })
 
   useEffect(() => {
     const sync = () => setBenNames(activeBeneficiaryNameSet())
@@ -327,6 +333,60 @@ export function RemittanceDisbursementPage() {
     if (!live) return
     void syncRiskProfilesFromLive().catch(() => {})
   }, [live])
+
+  // Listen for approved items from Queue page
+  useEffect(() => {
+    const handleNewDisbursement = (event: Event) => {
+      const customEvent = event as CustomEvent<DisbursementRow>
+      console.log('New disbursement entry:', customEvent.detail)
+      
+      const raw = localStorage.getItem(LS_DISBURSEMENT_KEY)
+      if (raw) {
+        const updated = JSON.parse(raw) as DisbursementRow[]
+        setRows(updated)
+        setSnack({
+          open: true,
+          severity: 'success',
+          message: `New payout: ${customEvent.detail?.remittanceNo || ''} ready for disbursement!`,
+        })
+      }
+    }
+    
+    window.addEventListener('disbursement:added', handleNewDisbursement as EventListener)
+    return () => window.removeEventListener('disbursement:added', handleNewDisbursement as EventListener)
+  }, [])
+
+  // Auto-refresh from localStorage on page focus
+  useEffect(() => {
+    if (import.meta.env.VITE_USE_LIVE_API === 'true') return
+    
+    function refreshFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem(LS_DISBURSEMENT_KEY)
+        if (!raw) return
+        const stored = JSON.parse(raw) as DisbursementRow[]
+        if (!Array.isArray(stored)) return
+        setRows((prev) => {
+          if (prev.length !== stored.length || prev[0]?.id !== stored[0]?.id) {
+            console.log('Refreshed disbursement rows:', stored.length, 'entries')
+            return stored
+          }
+          return prev
+        })
+      } catch { /* ignore */ }
+    }
+    
+    window.addEventListener('focus', refreshFromLocalStorage)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshFromLocalStorage()
+    })
+    
+    refreshFromLocalStorage()
+    
+    return () => {
+      window.removeEventListener('focus', refreshFromLocalStorage)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -1101,6 +1161,17 @@ export function RemittanceDisbursementPage() {
           )}
         </Stack>
       </Drawer>
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={6000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snack.severity} onClose={() => setSnack((s) => ({ ...s, open: false }))} variant="filled">
+          {snack.message}
+        </Alert>
+      </Snackbar>
     </Stack>
   )
 }

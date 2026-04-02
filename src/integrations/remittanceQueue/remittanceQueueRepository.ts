@@ -56,6 +56,10 @@ export function loadQueueRows(): RemittanceQueueRow[] {
   return local.loadQueueRows()
 }
 
+export function saveQueueRows(rows: RemittanceQueueRow[]): void {
+  local.saveQueueRows(rows)
+}
+
 function checkerBody(checkerUser?: string) {
   const normalizedChecker = checkerUser?.trim()
   return {
@@ -84,7 +88,10 @@ function isRecoverableLiveQueueError(e: unknown): boolean {
 
 export async function approveQueueItem(id: string, checkerUser?: string): Promise<void> {
   if (!frmsLiveApiEnabled()) {
-    local.saveQueueRows(local.loadQueueRows().filter((r) => r.id !== id))
+    // Update status to Approved instead of removing
+    const rows = local.loadQueueRows()
+    const updated = rows.map((r) => r.id === id ? { ...r, status: 'Approved' as const } : r)
+    local.saveQueueRows(updated)
     return
   }
   try {
@@ -93,7 +100,9 @@ export async function approveQueueItem(id: string, checkerUser?: string): Promis
   } catch (e) {
     if (!isRecoverableLiveQueueError(e)) throw e
     // Keep queue responsive when server is flaky or row is already processed server-side.
-    local.saveQueueRows(local.loadQueueRows().filter((r) => r.id !== id))
+    const rows = local.loadQueueRows()
+    const updated = rows.map((r) => r.id === id ? { ...r, status: 'Approved' as const } : r)
+    local.saveQueueRows(updated)
   }
 }
 
@@ -102,7 +111,10 @@ export async function rejectQueueItem(
   input?: { checkerUser?: string; reason?: string },
 ): Promise<void> {
   if (!frmsLiveApiEnabled()) {
-    local.saveQueueRows(local.loadQueueRows().filter((r) => r.id !== id))
+    // Update status to Rejected instead of removing
+    const rows = local.loadQueueRows()
+    const updated = rows.map((r) => r.id === id ? { ...r, status: 'Rejected' as const } : r)
+    local.saveQueueRows(updated)
     return
   }
   try {
@@ -114,6 +126,8 @@ export async function rejectQueueItem(
   } catch (e) {
     if (!isRecoverableLiveQueueError(e)) throw e
     // Keep queue responsive when server is flaky or row is already processed server-side.
-    local.saveQueueRows(local.loadQueueRows().filter((r) => r.id !== id))
+    const rows = local.loadQueueRows()
+    const updated = rows.map((r) => r.id === id ? { ...r, status: 'Rejected' as const } : r)
+    local.saveQueueRows(updated)
   }
 }

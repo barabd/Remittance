@@ -79,14 +79,19 @@ export const navGroups: NavGroup[] = [
     title: 'Remittance',
     items: [
       {
-        label: 'Approvals Queue',
-        to: '/remittance/queue',
-        icon: <FactCheckOutlinedIcon fontSize="small" />,
+        label: 'Single entry (abroad)',
+        to: '/exchange-house/single-entry',
+        icon: <PostAddOutlinedIcon fontSize="small" />,
       },
       {
         label: 'Search & Tracking',
         to: '/remittance/search',
         icon: <ManageSearchOutlinedIcon fontSize="small" />,
+      },
+      {
+        label: 'Approvals Queue',
+        to: '/remittance/queue',
+        icon: <FactCheckOutlinedIcon fontSize="small" />,
       },
       {
         label: 'Distribution/Disbursement',
@@ -104,9 +109,9 @@ export const navGroups: NavGroup[] = [
         icon: <StorefrontOutlinedIcon fontSize="small" />,
       },
       {
-        label: 'Single entry (abroad)',
-        to: '/exchange-house/single-entry',
-        icon: <PostAddOutlinedIcon fontSize="small" />,
+        label: 'Customers',
+        to: '/masters/customers',
+        icon: <PeopleOutlineOutlinedIcon fontSize="small" />,
       },
       {
         label: 'Block remittance reports',
@@ -142,6 +147,11 @@ export const navGroups: NavGroup[] = [
         label: 'Rules reference',
         to: '/compliance/rules',
         icon: <MenuBookOutlinedIcon fontSize="small" />,
+      },
+      {
+        label: 'BFIU Reporting (STR/CTR)',
+        to: '/compliance/bfiu-reporting',
+        icon: <AssessmentOutlinedIcon fontSize="small" />,
       },
     ],
   },
@@ -230,9 +240,14 @@ export const navGroups: NavGroup[] = [
         icon: <VpnKeyOutlinedIcon fontSize="small" />,
       },
       {
-        label: 'User rights / Security',
-        to: '/security/user-rights',
+        label: 'User & Role Management',
+        to: '/security/roles',
         icon: <ShieldOutlinedIcon fontSize="small" />,
+      },
+      {
+        label: 'Security audit / Rights',
+        to: '/security/user-rights',
+        icon: <SecurityOutlinedIcon fontSize="small" />,
       },
     ],
   },
