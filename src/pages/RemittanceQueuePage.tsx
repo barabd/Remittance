@@ -18,6 +18,110 @@ import {
   type RemittanceQueueRow,
 } from '../state/remittanceQueueStore'
 
+const LS_REMITTANCE_KEY = 'frms.remittance_search.v1'
+const LS_DISBURSEMENT_KEY = 'frms.disbursement.v1'
+
+type RemittanceStatus =
+  | 'Draft'
+  | 'Pending Approval'
+  | 'Approved'
+  | 'Sent'
+  | 'Paid'
+  | 'Stopped'
+  | 'Returned'
+  | 'Rejected'
+  | 'On Hold'
+
+/** Sync queue approval/rejection to Search page localStorage */
+function syncQueueStatusToSearchPage(remittanceNo: string, status: 'Approved' | 'Rejected', checker: string) {
+  try {
+    const raw = localStorage.getItem(LS_REMITTANCE_KEY)
+    if (!raw) return
+    
+    const rows = JSON.parse(raw) as Array<{ remittanceNo: string; status: RemittanceStatus; checker?: string }>
+    const updated = rows.map((r) => 
+      r.remittanceNo === remittanceNo 
+        ? { ...r, status, checker }
+        : r
+    )
+    localStorage.setItem(LS_REMITTANCE_KEY, JSON.stringify(updated))
+    console.log(`Synced ${status} status to Search page for ${remittanceNo}`)
+  } catch (e) {
+    console.error('Failed to sync status to Search page:', e)
+  }
+}
+
+/** Convert amount to BDT format */
+function convertToBDT(amount: string, corridor: string): string {
+  const numMatch = amount.match(/[\d,]+\.?\d*/)?.[0]?.replace(/,/g, '')
+  const num = parseFloat(numMatch || '0')
+  
+  const rates: Record<string, number> = {
+    'USD': 119,
+    'AED': 32.5,
+    'SAR': 31.8,
+    'GBP': 155,
+    'EUR': 130,
+  }
+  
+  const ccy = corridor.split('→')[0]?.trim() || 'USD'
+  const rate = rates[ccy] || 100
+  const bdtAmount = num * rate
+  
+  return `৳ ${bdtAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+/** Sync approved queue item to Disbursement page */
+function syncApprovedToDisbursement(queueRow: RemittanceQueueRow, checker: string) {
+  try {
+    // Get beneficiary from Search page
+    const searchRaw = localStorage.getItem(LS_REMITTANCE_KEY)
+    let beneficiary = 'Unknown'
+    
+    if (searchRaw) {
+      const searchRows = JSON.parse(searchRaw) as Array<{ 
+        remittanceNo: string
+        beneficiary: string 
+      }>
+      const match = searchRows.find(r => r.remittanceNo === queueRow.remittanceNo)
+      if (match) beneficiary = match.beneficiary
+    }
+
+    const disbursementItem = {
+      id: queueRow.id,
+      remittanceNo: queueRow.remittanceNo,
+      createdAt: queueRow.createdAt,
+      corridor: queueRow.corridor,
+      channel: queueRow.payType === 'Cash' ? 'Cash' as const : 'BEFTN' as const,
+      payoutTo: queueRow.payType === 'Cash' ? 'Cash Pickup' : 'Bank Account',
+      beneficiary: beneficiary,
+      amountBDT: convertToBDT(queueRow.amount, queueRow.corridor),
+      maker: queueRow.maker,
+      checker: checker,
+      status: 'Approved' as const,
+      originatingUnit: queueRow.maker.toLowerCase().includes('sub') ? 'Sub-Branch' as const : 'Branch' as const,
+    }
+
+    const disbursementRaw = localStorage.getItem(LS_DISBURSEMENT_KEY)
+    const disbursementRows = disbursementRaw ? JSON.parse(disbursementRaw) : []
+    
+    const existingIndex = disbursementRows.findIndex((r: { remittanceNo: string }) => r.remittanceNo === queueRow.remittanceNo)
+    
+    if (existingIndex >= 0) {
+      disbursementRows[existingIndex] = disbursementItem
+    } else {
+      disbursementRows.unshift(disbursementItem)
+    }
+
+    localStorage.setItem(LS_DISBURSEMENT_KEY, JSON.stringify(disbursementRows))
+    window.dispatchEvent(new CustomEvent('disbursement:added', { detail: disbursementItem }))
+    
+    console.log(`✓ Synced to Disbursement: ${queueRow.remittanceNo}`)
+  } catch (e) {
+    console.error('Failed to sync to Disbursement:', e)
+  }
+}
+
 function pendingCount(list: RemittanceQueueRow[]) {
   return list.filter((r) => r.status === 'Pending Approval').length
 }
@@ -131,9 +235,11 @@ export function RemittanceQueuePage() {
     setLiveError(null)
     try {
       await approveQueueItem(selected.id, checkerUser)
+      syncQueueStatusToSearchPage(selected.remittanceNo, 'Approved', checkerUser)
+      syncApprovedToDisbursement(selected, checkerUser)
       refreshFromStore()
       setSelectedId(null)
-      setSnack({ open: true, severity: 'success', message: 'Queue item approved and removed from active queue.' })
+      setSnack({ open: true, severity: 'success', message: 'Approved! Added to Disbursement worklist for payout.' })
     } catch (e) {
       setLiveError(e instanceof Error ? e.message : 'Approve failed')
       setSnack({
@@ -155,10 +261,11 @@ export function RemittanceQueuePage() {
         checkerUser,
         reason: rejectReason.trim() || undefined,
       })
+      syncQueueStatusToSearchPage(selected.remittanceNo, 'Rejected', checkerUser)
       refreshFromStore()
       setSelectedId(null)
       setRejectReason('')
-      setSnack({ open: true, severity: 'info', message: 'Queue item rejected and removed from active queue.' })
+      setSnack({ open: true, severity: 'info', message: 'Queue item rejected. Status updated in Search & Tracking.' })
     } catch (e) {
       setLiveError(e instanceof Error ? e.message : 'Reject failed')
       setSnack({
