@@ -366,7 +366,7 @@ function amlDtoToRow(d: {
   match: 'None' | 'Possible'
   list: AmlAlertRow['list']
   score: number
-  status: 'Open' | 'Investigating'
+  status: AmlAlertRow['status']
   subjectHint?: string
 }): AmlAlertRow {
   return {

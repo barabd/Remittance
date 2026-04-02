@@ -290,9 +290,9 @@ export type AmlAlertDto = {
   remittanceNo: string
   screenedAt: string
   match: 'None' | 'Possible'
-  list: 'OFAC' | 'Local' | 'OSFI' | 'VendorAPI' | 'OPAC' | 'DSRI'
+  list: 'OFAC' | 'Local' | 'OSFI' | 'VendorAPI' | 'OPAC' | 'DSRI' | 'UN' | 'BFIU'
   score: number
-  status: 'Open' | 'Investigating'
+  status: 'Open' | 'Investigating' | 'Resolved' | 'False Positive'
   subjectHint?: string
 }
 

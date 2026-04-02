@@ -41,7 +41,7 @@ import { assertPhotoIdOk, getHighRiskBusinessBlockReason } from '../../lib/amlCo
 import { runScreeningForRemittance } from '../../lib/screening'
 import { syncMlaSettingsFromLive } from '../../integrations/mlaSettings/mlaSettingsRepository'
 import { computeRemittanceIncentive } from '../../state/incentiveStore'
-import { loadQueueRows, saveQueueRows, REMITTANCE_QUEUE_EVENT } from '../../state/remittanceQueueStore'
+import { loadQueueRows, saveQueueRows } from '../../state/remittanceQueueStore'
 import type { RemittanceQueueRow } from '../../state/remittanceQueueStore'
 
 const LS_REMITTANCE_KEY = 'frms.remittance_search.v1'
