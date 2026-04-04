@@ -5,3 +5,4 @@ export async function pingFrmsDevHealth(): Promise<{ ok: boolean; service?: stri
   if (!r.ok) throw new Error(`Health HTTP ${r.status}`)
   return (await r.json()) as { ok: boolean; service?: string }
 }
+
