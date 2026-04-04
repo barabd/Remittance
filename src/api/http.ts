@@ -1,3 +1,4 @@
+import { getAccessToken } from '../auth/tokenStore'
 import { apiUrl } from './config'
 import type { ApiErrorBody } from './types'
 
@@ -23,9 +24,13 @@ function fetchCredentials(): RequestCredentials {
 }
 
 function authHeaders(): HeadersInit {
-  const token = import.meta.env.VITE_API_BEARER_TOKEN
-  if (typeof token === 'string' && token.length > 0) {
-    return { Authorization: `Bearer ${token}` }
+  const envToken = import.meta.env.VITE_API_BEARER_TOKEN
+  if (typeof envToken === 'string' && envToken.length > 0) {
+    return { Authorization: `Bearer ${envToken}` }
+  }
+  const sessionToken = getAccessToken()
+  if (sessionToken) {
+    return { Authorization: `Bearer ${sessionToken}` }
   }
   return {}
 }

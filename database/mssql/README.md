@@ -2,6 +2,40 @@
 
 **Full stack wiring (browser → Vite → Spring → these tables):** see **`docs/STACK_INTEGRATION.md`** (merge checklist + layer map). REST details: **`docs/API_CONTRACT.md`**.
 
+## SQL Server 2022 ↔ Spring Boot (JDBC)
+
+This folder holds **DDL** for database **`frms_ops`**. The running API connects via **JDBC** only — not the React app.
+
+| Item | Path |
+|------|------|
+| DDL + `sqlcmd` / PowerShell helpers | **`database/mssql/`** (this folder) |
+| Spring datasource (URL, user, password) | **`server/frms-ops-api/src/main/resources/application.yml`** → `spring.datasource` |
+| Copy-paste JDBC env template | **`database/mssql/jdbc.example.env`** |
+
+Override credentials without editing YAML (recommended):
+
+| Environment variable | Purpose |
+|----------------------|---------|
+| `FRMS_JDBC_URL` | Full JDBC URL (must include `databaseName=frms_ops` or your DB name) |
+| `FRMS_DB_USER` | SQL login (e.g. `sa` or a contained user) |
+| `FRMS_DB_PASSWORD` | Password |
+
+**Example JDBC URLs (SQL Server 2022)**
+
+- Default instance, local dev (same as YAML default):
+
+  `jdbc:sqlserver://localhost:1433;databaseName=frms_ops;encrypt=false;trustServerCertificate=true`
+
+- **Named instance** (e.g. `SQLEXPRESS` — use comma port *or* backslash instance, not both in the same style; Microsoft JDBC supports `serverName\instance`):
+
+  `jdbc:sqlserver://localhost\\SQLEXPRESS;databaseName=frms_ops;encrypt=false;trustServerCertificate=true`
+
+- **Encryption on** (typical for hardened installs; self-signed cert):
+
+  `jdbc:sqlserver://localhost:1433;databaseName=frms_ops;encrypt=true;trustServerCertificate=true`
+
+After the database exists, start **`frms-ops-api`**; with `ddl-auto: update`, Hibernate can create/update tables. For **explicit DDL**, use §1–2 below or `build_database.ps1`.
+
 ## 1. Create the database
 
 JDBC expects a database named **`frms_ops`** (see `server/frms-ops-api/src/main/resources/application.yml`). SQL Server does not create it automatically.

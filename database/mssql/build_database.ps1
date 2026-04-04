@@ -1,4 +1,6 @@
 # Creates database frms_ops (if missing) and applies all DDL scripts in dependency order.
+# SQL Server 2022: install sqlcmd (Go-line driver) or legacy ODBC sqlcmd; match -Server to your instance.
+# JDBC for Spring Boot is separate — see database/mssql/README.md and jdbc.example.env.
 # Run from anywhere, e.g.:
 #   powershell -ExecutionPolicy Bypass -File database/mssql/build_database.ps1
 #   powershell -ExecutionPolicy Bypass -File database/mssql/build_database.ps1 -Server ".\SQLEXPRESS" -TrustedConnection

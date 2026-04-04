@@ -32,6 +32,8 @@ import { NavSection } from './NavSection'
 import { navGroups } from './navItems'
 import { brand, layout } from '../theme/appTheme'
 import { BrandLogo } from '../assets/brandLogo'
+import { useAuth } from '../auth/AuthContext'
+import { shouldRequireLogin } from '../auth/requireLogin'
 import { loadCompanySettings } from '../state/companySettings'
 import { useLiveApi } from '../api/config'
 import {
@@ -52,6 +54,7 @@ type SearchSuggestion = {
 
 export function AdminLayout() {
   const liveApi = useLiveApi()
+  const { user: authUser, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
@@ -249,16 +252,21 @@ export function AdminLayout() {
                   fontSize: '0.95rem',
                 }}
               >
-                A
+                {(authUser?.fullName ?? 'Admin')
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((s) => s[0])
+                  .join('')
+                  .toUpperCase() || 'A'}
               </Avatar>
               <Box sx={{ minWidth: 0 }}>
                 <Typography
                   sx={{ fontWeight: 800, lineHeight: 1.2, fontSize: 14, color: layout.sidebarText }}
                 >
-                  Head Office Admin
+                  {authUser?.fullName ?? 'Head Office Admin'}
                 </Typography>
                 <Typography variant="body2" sx={{ color: layout.sidebarMuted, fontSize: 12.5, mt: 0.25 }}>
-                  HO · Admin
+                  {authUser ? `${authUser.branch} · ${authUser.role}` : 'HO · Admin'}
                 </Typography>
               </Box>
             </Stack>
@@ -528,8 +536,12 @@ export function AdminLayout() {
               <MenuItem
                 onClick={() => {
                   setMenuAnchor(null)
-                  // TODO: wire to real auth logout
-                  navigate('/dashboard')
+                  logout()
+                  if (shouldRequireLogin()) {
+                    navigate('/login', { replace: true })
+                  } else {
+                    navigate('/dashboard')
+                  }
                 }}
               >
                 <LogoutOutlinedIcon fontSize="small" style={{ marginRight: 10 }} />

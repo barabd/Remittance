@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -25,7 +26,9 @@ import org.springframework.test.web.servlet.MockMvc;
  * Covers GET, PATCH happy paths, and all 400/404 validation branches.
  */
 @WebMvcTest(MlaSettingsController.class)
-@TestPropertySource(properties = "server.error.include-message=always")
+@AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource(
+    properties = {"frms.security.enabled=false", "server.error.include-message=always"})
 class MlaSettingsControllerTest {
 
   @Autowired private MockMvc mockMvc;

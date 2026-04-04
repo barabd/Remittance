@@ -17,6 +17,7 @@ import type {
   BeftnAckFileDto,
   BeftnAckProfileDto,
   BeftnAckRowDto,
+  ComplianceRulesReadinessDto,
   CoverFundRecord,
   DashboardMetricsDto,
   DisbursementAuditEventDto,
@@ -591,7 +592,7 @@ export function liveDeleteVaptFinding(id: string) {
 /** --- Compliance rules readiness --- */
 
 export function liveGetComplianceRulesReadiness() {
-  return apiGet<Record<string, unknown>>('/compliance/rules-readiness')
+  return apiGet<ComplianceRulesReadinessDto>('/compliance/rules-readiness')
 }
 
 /** --- Incentive distribution --- */

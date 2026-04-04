@@ -18,11 +18,7 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import { ApiHttpError } from '../../api/http'
 import { useLiveApi } from '../../api/config'
-import {
-  getMlaSettingsFromLive,
-  pushMlaSettingsToLive,
-  syncMlaSettingsFromLive,
-} from '../../integrations/mlaSettings/mlaSettingsRepository'
+import { getMlaSettingsFromLive, pushMlaSettingsToLive } from '../../integrations/mlaSettings/mlaSettingsRepository'
 import {
   AML_COMPLIANCE_SETTINGS_EVENT,
   loadAmlComplianceSettings,

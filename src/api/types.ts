@@ -60,6 +60,24 @@ export type ReportRequestAuditEventDto = {
   details?: string
 }
 
+/** GET `/compliance/rules-readiness` — compliance rules reference snapshot. */
+export type ComplianceRulesReadinessDto = {
+  generatedAt: string
+  backend: { ok: boolean; service: string }
+  database: {
+    mlaSettingsSeeded: boolean
+    screeningMode: string
+    remittanceRecordCount: number
+    remittancePendingApprovalCount: number
+    amlAlertOpenCount: number
+    emailOutboxQueuedCount: number
+  }
+  integrations: {
+    smtpEnabled: boolean
+    emailOutboxMode: string
+  }
+}
+
 export type ApiErrorBody = {
   code?: string
   message?: string

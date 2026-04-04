@@ -9,12 +9,16 @@ import {
 } from '@mui/material'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Fragment, useEffect, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import { canAccessPath, canSeeAuditNav } from '../auth/routeAccess'
+import { shouldRequireLogin } from '../auth/requireLogin'
 import { canAccessAuditTrail, DEMO_SESSION_EVENT } from '../state/demoSessionStore'
 import { navGroups } from './navItems'
 import { brand, layout } from '../theme/appTheme'
 
 export function NavSection() {
   const location = useLocation()
+  const { user } = useAuth()
   const [, setNavBump] = useState(0)
 
   useEffect(() => {
@@ -46,7 +50,18 @@ export function NavSection() {
           </ListSubheader>
 
           {group.items
-            .filter((item) => (item.to === '/audit' ? canAccessAuditTrail() : true))
+            .filter((item) => {
+              if (
+                item.to === '/audit' &&
+                !canSeeAuditNav(shouldRequireLogin(), user?.role, canAccessAuditTrail)
+              ) {
+                return false
+              }
+              if (shouldRequireLogin() && user && !canAccessPath(user.rights, item.to)) {
+                return false
+              }
+              return true
+            })
             .map((item) => {
               const selected = location.pathname === item.to
 

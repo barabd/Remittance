@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './auth/AuthContext'
+import { RequireAuth } from './auth/RequireAuth'
 import { AdminLayout } from './layout/AdminLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
@@ -38,11 +40,15 @@ import { HeadOfficePermissionsPage } from './pages/head-office/HeadOfficePermiss
 import { UserRightsModulePage } from './pages/security/UserRightsModulePage'
 import { BulkDataHubPage } from './pages/operations/BulkDataHubPage'
 import { ReportsPage } from './pages/finance/ReportsPage'
+import { LoginPage } from './pages/LoginPage'
 
 export default function App() {
   return (
+    <AuthProvider>
     <Routes>
-      <Route element={<AdminLayout />}>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<RequireAuth />}>
+        <Route element={<AdminLayout />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/operations/hub" element={<OperationsHubPage />} />
@@ -123,7 +129,9 @@ export default function App() {
         <Route path="/profile/change-password" element={<ChangePasswordPage />} />
 
         <Route path="*" element={<PlaceholderPage title="Not Found" />} />
+        </Route>
       </Route>
     </Routes>
+    </AuthProvider>
   )
 }

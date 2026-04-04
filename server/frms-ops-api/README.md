@@ -6,7 +6,7 @@ Spring Boot 3 service for FRMS admin data: **operations hub** (notifications, em
 
 - JDK 17+
 - Maven 3.9+
-- SQL Server with database `frms_ops` (or let Hibernate `ddl-auto=update` create tables on first run)
+- SQL Server (2022 supported) with database **`frms_ops`** — create with `database/mssql/00_create_database.sql` or `build_database.ps1`; JDBC env template: `database/mssql/jdbc.example.env`. Or rely on Hibernate `ddl-auto=update` after the empty DB exists.
 
 ## Run
 
@@ -26,6 +26,18 @@ Override via environment variables (see `src/main/resources/application.yml`):
 | `FRMS_JDBC_URL` | JDBC URL for SQL Server |
 | `FRMS_DB_USER` | DB user |
 | `FRMS_DB_PASSWORD` | DB password |
+
+## JWT authentication
+
+When `FRMS_SECURITY_ENABLED=true` (default), all REST endpoints except `POST /api/v1/auth/login` and `GET /api/v1/auth/health` require `Authorization: Bearer <jwt>`.
+
+| Variable | Purpose |
+|----------|---------|
+| `FRMS_SECURITY_ENABLED` | `false` disables JWT checks (local/tests only). |
+| `FRMS_JWT_SECRET` | HS256 secret — **must be ≥ 32 bytes** in production. |
+| `FRMS_JWT_EXPIRATION_MS` | Access token lifetime (default 24h). |
+
+Seeded directory users (first DB init): `ho_admin` / `ChangeMe!123` and `branch01_maker` / `ChangeMe!123` (see `SecurityDirectoryController`). `GET /api/v1/auth/me` returns the current profile including `rights` for UI RBAC.
 
 ## SMTP (real send)
 
